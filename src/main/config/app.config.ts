@@ -18,11 +18,11 @@ export const APP_CONFIG = {
   window: {
     main: {
       width: 1000,
-      height: 650,
+      height: 700,
       minWidth: 1000,
-      minHeight: 650,
+      minHeight: 700,
       maxWidth: 1000,
-      maxHeight: 650,
+      maxHeight: 700,
     },
     overlay: {
       width: 600,

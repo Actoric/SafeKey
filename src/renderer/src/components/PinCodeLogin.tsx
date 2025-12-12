@@ -55,7 +55,7 @@ export function PinCodeLogin() {
       <div className="master-password-card">
         <h1>SafeKey</h1>
         {username && (
-          <p className="welcome-message" style={{ fontSize: '16px', marginBottom: '8px', color: 'var(--text-primary)', textAlign: 'center' }}>
+          <p className="welcome-message" style={{ fontSize: '16px', margin: '0 0 12px 0', padding: 0, color: 'var(--text-primary)', textAlign: 'center', lineHeight: '1.4' }}>
             Добро пожаловать, {username}!
           </p>
         )}
