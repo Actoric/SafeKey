@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 import { Download, CheckCircle, AlertCircle } from 'lucide-react';
 import './UpdateProgress.css';
 
@@ -10,10 +9,8 @@ interface UpdateProgressProps {
 }
 
 export function UpdateProgress({ version, progress = 0, status, error }: UpdateProgressProps) {
-  const [show, setShow] = useState(true);
-
   // Всегда показываем, если есть статус обновления
-  if (!show || !status) return null;
+  if (!status) return null;
 
   return (
     <div className="update-progress-overlay">
