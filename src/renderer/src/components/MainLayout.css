@@ -1,0 +1,79 @@
+.main-layout {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.main-content {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+.confirm-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.confirm-dialog {
+  background: var(--bg-primary);
+  border-radius: 12px;
+  padding: 24px;
+  min-width: 300px;
+  max-width: 400px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.confirm-dialog h3 {
+  margin: 0 0 12px 0;
+  font-size: 18px;
+  color: var(--text-primary);
+}
+
+.confirm-dialog p {
+  margin: 0 0 20px 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.confirm-actions .secondary-button,
+.confirm-actions .primary-button {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+}
+
+.confirm-actions .secondary-button {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.confirm-actions .secondary-button:hover {
+  background: var(--bg-tertiary);
+}
+
+.confirm-actions .primary-button {
+  background: var(--accent);
+  color: white;
+}
+
+.confirm-actions .primary-button:hover {
+  background: var(--accent-hover);
+}

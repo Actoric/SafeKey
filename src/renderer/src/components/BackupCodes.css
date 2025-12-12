@@ -1,0 +1,304 @@
+.backup-codes {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #f5f5f5;
+}
+
+.backup-codes-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: white;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.backup-codes-header h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+}
+
+.sort-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sort-select {
+  padding: 4px 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: white;
+  color: #333;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.sort-select:hover {
+  border-color: #4a90e2;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  color: #666;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-button:hover {
+  color: #333;
+}
+
+.backup-codes-content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.backup-codes-list {
+  width: 300px;
+  background: white;
+  border-right: 1px solid #e0e0e0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.add-entry-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  margin: 12px;
+  background: #4a90e2;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.add-entry-button:hover {
+  background: #357abd;
+}
+
+.add-entry-form {
+  padding: 12px;
+  border-top: 1px solid #e0e0e0;
+  background: #f9f9f9;
+}
+
+.form-input,
+.form-textarea {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.form-textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+
+.form-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.primary-button,
+.secondary-button {
+  flex: 1;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.primary-button {
+  background: #4a90e2;
+  color: white;
+}
+
+.primary-button:hover {
+  background: #357abd;
+}
+
+.secondary-button {
+  background: #e0e0e0;
+  color: #333;
+}
+
+.secondary-button:hover {
+  background: #d0d0d0;
+}
+
+.entries-list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.entry-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background 0.2s;
+}
+
+.entry-item:hover {
+  background: #f5f5f5;
+}
+
+.entry-item.selected {
+  background: #e3f2fd;
+  border-left: 3px solid #4a90e2;
+}
+
+.entry-title {
+  flex: 1;
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
+}
+
+.delete-entry-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  color: #999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.delete-entry-button:hover {
+  color: #e53935;
+}
+
+.backup-codes-detail {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+  background: white;
+}
+
+.entry-detail {
+  max-width: 600px;
+}
+
+.entry-detail-header {
+  margin-bottom: 20px;
+}
+
+.entry-title-input {
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 18px;
+  font-weight: 600;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  color: #333;
+}
+
+.codes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.code-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  background: #f9f9f9;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.code-item.used {
+  background: #e8f5e9;
+  border-color: #4caf50;
+  opacity: 0.7;
+}
+
+.code-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  cursor: pointer;
+}
+
+.code-checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.code-text {
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
+}
+
+.code-item.used .code-text {
+  text-decoration: line-through;
+  color: #666;
+}
+
+.copy-code-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  color: #666;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.copy-code-button:hover {
+  background: #e0e0e0;
+  color: #333;
+}
+
+.empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #999;
+  font-size: 14px;
+}
+
+.backup-codes-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #666;
+  font-size: 14px;
+}
+
