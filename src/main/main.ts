@@ -55,6 +55,7 @@ function createMainWindow() {
     maximizable: false, // Запрещаем развертывание на весь экран
     frame: false,
     titleBarStyle: 'hidden',
+    title: 'SafeKey', // Устанавливаем заголовок окна
     icon: iconPath, // Явно указываем иконку для окна
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),

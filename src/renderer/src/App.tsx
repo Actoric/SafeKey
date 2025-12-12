@@ -56,24 +56,30 @@ function App() {
   // Обработка событий обновления
   useEffect(() => {
     const handleUpdateChecking = () => {
+      console.log('[App] Обновление: проверка...');
       setUpdateStatus('checking');
     };
 
-    const handleUpdateAvailable = (event: any, info: any) => {
-      setUpdateVersion(info.version);
+    const handleUpdateAvailable = (_event: any, info: any) => {
+      console.log('[App] Обновление доступно:', info?.version);
+      setUpdateVersion(info?.version || '');
       setUpdateStatus('downloading');
     };
 
-    const handleUpdateProgress = (event: any, progressObj: any) => {
-      setUpdateProgress(progressObj.percent || 0);
+    const handleUpdateProgress = (_event: any, progressObj: any) => {
+      const percent = progressObj?.percent || 0;
+      setUpdateProgress(percent);
+      console.log('[App] Прогресс обновления:', percent + '%');
     };
 
     const handleUpdateDownloaded = () => {
+      console.log('[App] Обновление загружено');
       setUpdateStatus('ready');
     };
 
-    const handleUpdateError = (event: any, error: any) => {
-      setUpdateError(error.message || 'Неизвестная ошибка');
+    const handleUpdateError = (_event: any, error: any) => {
+      console.error('[App] Ошибка обновления:', error);
+      setUpdateError(error?.message || 'Неизвестная ошибка');
       setUpdateStatus('error');
     };
 
@@ -81,6 +87,7 @@ function App() {
     if (window.electronAPI && (window.electronAPI as any).ipcRenderer) {
       const ipcRenderer = (window.electronAPI as any).ipcRenderer;
       
+      console.log('[App] Подписка на события обновления');
       ipcRenderer.on('update-checking', handleUpdateChecking);
       ipcRenderer.on('update-available', handleUpdateAvailable);
       ipcRenderer.on('update-download-progress', handleUpdateProgress);
@@ -94,6 +101,8 @@ function App() {
         ipcRenderer.removeAllListeners('update-downloaded');
         ipcRenderer.removeAllListeners('update-error');
       };
+    } else {
+      console.warn('[App] ipcRenderer недоступен для событий обновления');
     }
   }, []);
 
@@ -123,18 +132,25 @@ function App() {
 
   console.log('[App] Рендерим MainLayout. isInitialized:', isInitialized, 'isAuthenticated:', isAuthenticated);
 
-  // Основное приложение
-  return (
-    <>
-      <TitleBar />
-      {updateStatus && (
+  // Если идет обновление, показываем только UI обновления
+  if (updateStatus) {
+    return (
+      <>
+        <TitleBar />
         <UpdateProgress
           version={updateVersion}
           progress={updateProgress}
           status={updateStatus}
           error={updateError}
         />
-      )}
+      </>
+    );
+  }
+
+  // Основное приложение
+  return (
+    <>
+      <TitleBar />
       <Routes>
         <Route path="*" element={<MainLayout />} />
       </Routes>

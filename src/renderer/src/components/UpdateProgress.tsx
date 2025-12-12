@@ -12,7 +12,8 @@ interface UpdateProgressProps {
 export function UpdateProgress({ version, progress = 0, status, error }: UpdateProgressProps) {
   const [show, setShow] = useState(true);
 
-  if (!show) return null;
+  // Всегда показываем, если есть статус обновления
+  if (!show || !status) return null;
 
   return (
     <div className="update-progress-overlay">
@@ -68,7 +69,9 @@ export function UpdateProgress({ version, progress = 0, status, error }: UpdateP
               {error && <p className="update-error">{error}</p>}
               <button 
                 className="update-close-btn"
-                onClick={() => setShow(false)}
+                onClick={() => {
+                  window.location.reload();
+                }}
               >
                 Закрыть
               </button>
