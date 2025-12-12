@@ -95,6 +95,15 @@ const electronAPI = {
   copyToClipboard: (text: string) => ipcRenderer.invoke('copy-to-clipboard', text),
   // URL
   openUrl: (url: string) => ipcRenderer.invoke('open-url', url),
+  // IPC Renderer для подписки на события
+  ipcRenderer: {
+    on: (channel: string, callback: (...args: any[]) => void) => {
+      ipcRenderer.on(channel, (event, ...args) => callback(...args));
+    },
+    removeAllListeners: (channel: string) => {
+      ipcRenderer.removeAllListeners(channel);
+    },
+  },
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);

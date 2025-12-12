@@ -1,15 +1,20 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import { PinCodeLogin } from './components/PinCodeLogin';
 import { MainLayout } from './components/MainLayout';
 import { OverlayWindow } from './components/OverlayWindow';
 import { TitleBar } from './components/TitleBar';
+import { UpdateProgress } from './components/UpdateProgress';
 import { useAuth } from './hooks/useAuth';
 
 function App() {
   const location = useLocation();
   const { isAuthenticated, isInitialized, checkAuth } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [updateStatus, setUpdateStatus] = useState<'checking' | 'downloading' | 'downloaded' | 'error' | 'ready' | null>(null);
+  const [updateVersion, setUpdateVersion] = useState<string>('');
+  const [updateProgress, setUpdateProgress] = useState(0);
+  const [updateError, setUpdateError] = useState<string>('');
 
   // Логирование изменений состояния для отладки
   useEffect(() => {
@@ -48,6 +53,50 @@ function App() {
     init();
   }, [checkAuth]);
 
+  // Обработка событий обновления
+  useEffect(() => {
+    const handleUpdateChecking = () => {
+      setUpdateStatus('checking');
+    };
+
+    const handleUpdateAvailable = (event: any, info: any) => {
+      setUpdateVersion(info.version);
+      setUpdateStatus('downloading');
+    };
+
+    const handleUpdateProgress = (event: any, progressObj: any) => {
+      setUpdateProgress(progressObj.percent || 0);
+    };
+
+    const handleUpdateDownloaded = () => {
+      setUpdateStatus('ready');
+    };
+
+    const handleUpdateError = (event: any, error: any) => {
+      setUpdateError(error.message || 'Неизвестная ошибка');
+      setUpdateStatus('error');
+    };
+
+    // Подписываемся на события обновления
+    if (window.electronAPI && (window.electronAPI as any).ipcRenderer) {
+      const ipcRenderer = (window.electronAPI as any).ipcRenderer;
+      
+      ipcRenderer.on('update-checking', handleUpdateChecking);
+      ipcRenderer.on('update-available', handleUpdateAvailable);
+      ipcRenderer.on('update-download-progress', handleUpdateProgress);
+      ipcRenderer.on('update-downloaded', handleUpdateDownloaded);
+      ipcRenderer.on('update-error', handleUpdateError);
+
+      return () => {
+        ipcRenderer.removeAllListeners('update-checking');
+        ipcRenderer.removeAllListeners('update-available');
+        ipcRenderer.removeAllListeners('update-download-progress');
+        ipcRenderer.removeAllListeners('update-downloaded');
+        ipcRenderer.removeAllListeners('update-error');
+      };
+    }
+  }, []);
+
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
@@ -78,6 +127,14 @@ function App() {
   return (
     <>
       <TitleBar />
+      {updateStatus && (
+        <UpdateProgress
+          version={updateVersion}
+          progress={updateProgress}
+          status={updateStatus}
+          error={updateError}
+        />
+      )}
       <Routes>
         <Route path="*" element={<MainLayout />} />
       </Routes>

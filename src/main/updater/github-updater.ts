@@ -25,26 +25,19 @@ export function initializeUpdater(window: BrowserWindow) {
   // События автообновления
   autoUpdater.on('checking-for-update', () => {
     console.log('[Updater] Проверка обновлений...');
+    if (mainWindow) {
+      mainWindow.webContents.send('update-checking');
+    }
   });
 
   autoUpdater.on('update-available', (info: UpdateInfo) => {
     console.log('[Updater] Доступно обновление:', info.version);
     
     if (mainWindow) {
-      dialog.showMessageBox(mainWindow, {
-        type: 'info',
-        title: 'Доступно обновление',
-        message: `Доступна новая версия ${info.version}`,
-        detail: info.releaseNotes ? String(info.releaseNotes) : 'Обновление будет загружено в фоновом режиме.',
-        buttons: ['Установить сейчас', 'Позже'],
-        defaultId: 0,
-        cancelId: 1,
-      }).then((result) => {
-        if (result.response === 0) {
-          // Пользователь выбрал "Установить сейчас"
-          autoUpdater.downloadUpdate();
-        }
-      });
+      // Отправляем событие в renderer для отображения UI обновления
+      mainWindow.webContents.send('update-available', info);
+      // Автоматически начинаем загрузку
+      autoUpdater.downloadUpdate();
     }
   });
 
@@ -54,6 +47,9 @@ export function initializeUpdater(window: BrowserWindow) {
 
   autoUpdater.on('error', (err: Error) => {
     console.error('[Updater] Ошибка:', err);
+    if (mainWindow) {
+      mainWindow.webContents.send('update-error', { message: err.message });
+    }
   });
 
   autoUpdater.on('download-progress', (progressObj: ProgressInfo) => {
@@ -70,20 +66,13 @@ export function initializeUpdater(window: BrowserWindow) {
     console.log('[Updater] Обновление загружено');
     
     if (mainWindow) {
-      dialog.showMessageBox(mainWindow, {
-        type: 'info',
-        title: 'Обновление готово',
-        message: 'Обновление загружено и готово к установке.',
-        detail: 'Приложение будет перезапущено для установки обновления.',
-        buttons: ['Перезапустить сейчас', 'Позже'],
-        defaultId: 0,
-        cancelId: 1,
-      }).then((result) => {
-        if (result.response === 0) {
-          // Пользователь выбрал "Перезапустить сейчас"
-          autoUpdater.quitAndInstall(false, true);
-        }
-      });
+      // Отправляем событие в renderer
+      mainWindow.webContents.send('update-downloaded');
+      
+      // Автоматически перезапускаем через 3 секунды
+      setTimeout(() => {
+        autoUpdater.quitAndInstall(false, true);
+      }, 3000);
     }
   });
 }
