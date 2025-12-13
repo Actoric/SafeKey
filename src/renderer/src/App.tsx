@@ -5,7 +5,6 @@ import { MainLayout } from './components/MainLayout';
 import { OverlayWindow } from './components/OverlayWindow';
 import { TitleBar } from './components/TitleBar';
 import { UpdateProgress } from './components/UpdateProgress';
-import { AreaSelector } from './components/AreaSelector';
 import { useAuth } from './hooks/useAuth';
 
 function App() {
@@ -56,13 +55,30 @@ function App() {
 
   // Обработка событий обновления
   useEffect(() => {
+    let checkingTimeout: NodeJS.Timeout | null = null;
+    
     const handleUpdateChecking = () => {
       console.log('[App] Обновление: проверка...');
       setUpdateStatus('checking');
+      setUpdateError('');
+      
+      // Устанавливаем таймаут на 30 секунд
+      if (checkingTimeout) {
+        clearTimeout(checkingTimeout);
+      }
+      checkingTimeout = setTimeout(() => {
+        console.log('[App] Таймаут проверки обновлений (30 секунд)');
+        setUpdateStatus(null);
+        setUpdateError('Проверка обновлений заняла слишком много времени. Попробуйте позже.');
+      }, 30000);
     };
 
     const handleUpdateAvailable = (_event: any, info: any) => {
       console.log('[App] Обновление доступно:', info?.version);
+      if (checkingTimeout) {
+        clearTimeout(checkingTimeout);
+        checkingTimeout = null;
+      }
       setUpdateVersion(info?.version || '');
       setUpdateStatus('downloading');
     };
@@ -80,6 +96,11 @@ function App() {
 
     const handleUpdateError = (_event: any, error: any) => {
       console.error('[App] Ошибка обновления:', error);
+      if (checkingTimeout) {
+        clearTimeout(checkingTimeout);
+        checkingTimeout = null;
+      }
+      
       const errorMessage = error?.message || error?.toString() || 'Неизвестная ошибка';
       
       // Проверяем, не является ли это просто отсутствием обновлений
@@ -95,6 +116,7 @@ function App() {
         // Это не ошибка, просто нет обновлений
         console.log('[App] Обновления не найдены (обработано как отсутствие обновлений)');
         setUpdateStatus(null);
+        setUpdateError('');
         return;
       }
       
@@ -105,6 +127,7 @@ function App() {
           errorMessage.includes('timeout')) {
         console.log('[App] Ошибка сети при проверке обновлений, игнорируем');
         setUpdateStatus(null);
+        setUpdateError('');
         return;
       }
       
@@ -114,7 +137,12 @@ function App() {
 
     const handleUpdateNotAvailable = () => {
       console.log('[App] Обновления не найдены - программа максимальной версии');
+      if (checkingTimeout) {
+        clearTimeout(checkingTimeout);
+        checkingTimeout = null;
+      }
       setUpdateStatus(null);
+      setUpdateError('');
     };
 
     // Подписываемся на события обновления
@@ -130,6 +158,9 @@ function App() {
       ipcRenderer.on('update-not-available', handleUpdateNotAvailable);
 
       return () => {
+        if (checkingTimeout) {
+          clearTimeout(checkingTimeout);
+        }
         ipcRenderer.removeAllListeners('update-checking');
         ipcRenderer.removeAllListeners('update-available');
         ipcRenderer.removeAllListeners('update-download-progress');
@@ -155,31 +186,6 @@ function App() {
     return <OverlayWindow />;
   }
 
-  // Селектор области
-  if (location.hash === '#area-selector') {
-    return (
-      <AreaSelector
-        onSelect={async (bounds) => {
-          try {
-            const result = await window.electronAPI.captureAreaScreenshot(bounds);
-            if (result.success) {
-              console.log('Скриншот сохранен:', result.path);
-              await window.electronAPI.closeAreaSelector();
-            } else {
-              console.error('Ошибка захвата скриншота:', result.error);
-              await window.electronAPI.closeAreaSelector();
-            }
-          } catch (error) {
-            console.error('Ошибка:', error);
-            await window.electronAPI.closeAreaSelector();
-          }
-        }}
-        onCancel={async () => {
-          await window.electronAPI.closeAreaSelector();
-        }}
-      />
-    );
-  }
 
   // Если не авторизован
   if (!isAuthenticated) {

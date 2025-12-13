@@ -1,6 +1,6 @@
 {
   "name": "safekey",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "Менеджер паролей SafeKey",
   "main": "dist/main/main.js",
   "scripts": {
@@ -84,7 +84,7 @@
     "win": {
       "target": [
         {
-          "target": "nsis",
+          "target": "dir",
           "arch": [
             "x64"
           ]
@@ -110,9 +110,6 @@
       "shortcutName": "SafeKey",
       "warningsAsErrors": false,
       "menuCategory": "Utilities",
-      "installerIcon": "build/icon.ico",
-      "uninstallerIcon": "build/icon.ico",
-      "installerHeaderIcon": "build/icon.ico",
       "artifactName": "${productName}-Setup-${version}-${arch}.${ext}",
       "deleteAppDataOnUninstall": false
     },

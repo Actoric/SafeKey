@@ -92,10 +92,6 @@ export interface ElectronAPI {
   decryptSecurityQuestionEntry: (entry: DatabaseSecurityQuestionEntry) => Promise<SecurityQuestionEntryData>;
   // Auto Updater
   checkForUpdates: () => Promise<{ success: boolean; message?: string }>;
-  // Area Selector
-  startAreaSelection: () => Promise<{ success: boolean; error?: string }>;
-  closeAreaSelector: () => Promise<{ success: boolean }>;
-  captureAreaScreenshot: (bounds: { x: number; y: number; width: number; height: number }) => Promise<{ success: boolean; path?: string; dataURL?: string; error?: string }>;
 }
 
 export interface CloudSettings {

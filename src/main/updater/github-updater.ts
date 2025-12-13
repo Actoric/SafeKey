@@ -14,8 +14,15 @@ export function initializeUpdater(window: BrowserWindow) {
     repo: 'SafeKey',
   });
 
+  // Настройка таймаутов для более быстрой проверки
+  autoUpdater.autoDownload = false;
+  autoUpdater.autoInstallOnAppQuit = true;
+
   // Проверка обновлений при запуске (тихо, без уведомлений)
-  autoUpdater.checkForUpdatesAndNotify();
+  // Используем checkForUpdates вместо checkForUpdatesAndNotify для лучшего контроля
+  setTimeout(() => {
+    checkForUpdates();
+  }, 5000); // Задержка 5 секунд после запуска
 
   // Проверка обновлений каждые 4 часа
   setInterval(() => {
@@ -99,30 +106,47 @@ export function initializeUpdater(window: BrowserWindow) {
 }
 
 export function checkForUpdates() {
-  autoUpdater.checkForUpdates().catch((error) => {
-    console.error('[Updater] Ошибка при проверке обновлений:', error);
-    const errorMessage = error?.message || error?.toString() || 'Неизвестная ошибка';
-    
-    // Проверяем, не является ли это просто отсутствием обновлений
-    const isNoUpdateError = 
-      errorMessage.includes('No update available') ||
-      errorMessage.includes('not available') ||
-      errorMessage.includes('already the latest version') ||
-      errorMessage.includes('latest version') ||
-      errorMessage.includes('404') ||
-      errorMessage.includes('Not Found');
-    
+  // Устанавливаем таймаут для проверки обновлений (30 секунд)
+  const timeout = setTimeout(() => {
+    console.log('[Updater] Таймаут проверки обновлений (30 секунд)');
     if (mainWindow) {
-      if (isNoUpdateError) {
-        // Это не ошибка, просто нет обновлений
-        console.log('[Updater] Обновления не найдены (обработано как отсутствие обновлений)');
-        mainWindow.webContents.send('update-not-available');
-      } else {
-        // Реальная ошибка - отправляем только если это не тихая проверка
-        console.error('[Updater] Реальная ошибка при проверке обновлений:', errorMessage);
-        mainWindow.webContents.send('update-error', { message: errorMessage });
-      }
+      mainWindow.webContents.send('update-not-available');
     }
-  });
+  }, 30000);
+
+  autoUpdater.checkForUpdates()
+    .then((result) => {
+      clearTimeout(timeout);
+      console.log('[Updater] Проверка обновлений завершена:', result);
+    })
+    .catch((error) => {
+      clearTimeout(timeout);
+      console.error('[Updater] Ошибка при проверке обновлений:', error);
+      const errorMessage = error?.message || error?.toString() || 'Неизвестная ошибка';
+      
+      // Проверяем, не является ли это просто отсутствием обновлений
+      const isNoUpdateError = 
+        errorMessage.includes('No update available') ||
+        errorMessage.includes('not available') ||
+        errorMessage.includes('already the latest version') ||
+        errorMessage.includes('latest version') ||
+        errorMessage.includes('404') ||
+        errorMessage.includes('Not Found') ||
+        errorMessage.includes('timeout') ||
+        errorMessage.includes('ETIMEDOUT') ||
+        errorMessage.includes('network');
+      
+      if (mainWindow) {
+        if (isNoUpdateError) {
+          // Это не ошибка, просто нет обновлений или проблемы с сетью
+          console.log('[Updater] Обновления не найдены (обработано как отсутствие обновлений)');
+          mainWindow.webContents.send('update-not-available');
+        } else {
+          // Реальная ошибка - отправляем только если это не тихая проверка
+          console.error('[Updater] Реальная ошибка при проверке обновлений:', errorMessage);
+          mainWindow.webContents.send('update-error', { message: errorMessage });
+        }
+      }
+    });
 }
 
