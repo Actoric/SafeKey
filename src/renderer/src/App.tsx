@@ -12,10 +12,11 @@ function App() {
   const location = useLocation();
   const { isAuthenticated, isInitialized, checkAuth } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [updateStatus, setUpdateStatus] = useState<'checking' | 'downloading' | 'downloaded' | 'error' | 'ready' | null>(null);
+  const [updateStatus, setUpdateStatus] = useState<'checking' | 'downloading' | 'downloaded' | 'error' | 'ready' | 'completed' | null>(null);
   const [updateVersion, setUpdateVersion] = useState<string>('');
   const [updateProgress, setUpdateProgress] = useState(0);
   const [updateError, setUpdateError] = useState<string>('');
+  const [updateResultMessage, setUpdateResultMessage] = useState<string>('');
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
 
   // Логирование изменений состояния для отладки
@@ -159,12 +160,20 @@ function App() {
         clearTimeout(checkingTimeout);
         checkingTimeout = null;
       }
-      setUpdateStatus(null);
+      // Показываем результат на 3 секунды перед закрытием
+      setUpdateResultMessage('Программа обновлена до последней версии');
+      setUpdateStatus('completed');
       setUpdateError('');
       setToast({ 
         message: 'Программа обновлена до последней версии', 
         type: 'success' 
       });
+      
+      // Закрываем окно через 3 секунды
+      setTimeout(() => {
+        setUpdateStatus(null);
+        setUpdateResultMessage('');
+      }, 3000);
     };
 
     // Подписываемся на события обновления
@@ -232,6 +241,7 @@ function App() {
           progress={updateProgress}
           status={updateStatus}
           error={updateError}
+          resultMessage={updateResultMessage}
         />
         {toast && (
           <Toast

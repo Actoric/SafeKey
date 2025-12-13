@@ -4,11 +4,12 @@ import './UpdateProgress.css';
 interface UpdateProgressProps {
   version?: string;
   progress?: number;
-  status: 'checking' | 'downloading' | 'downloaded' | 'error' | 'ready';
+  status: 'checking' | 'downloading' | 'downloaded' | 'error' | 'ready' | 'completed';
   error?: string;
+  resultMessage?: string;
 }
 
-export function UpdateProgress({ version, progress = 0, status, error }: UpdateProgressProps) {
+export function UpdateProgress({ version, progress = 0, status, error, resultMessage }: UpdateProgressProps) {
   // Всегда показываем, если есть статус обновления
   if (!status) return null;
 
@@ -72,6 +73,14 @@ export function UpdateProgress({ version, progress = 0, status, error }: UpdateP
               >
                 Закрыть
               </button>
+            </div>
+          )}
+
+          {status === 'completed' && (
+            <div className="update-status">
+              <CheckCircle size={32} className="update-icon success" />
+              <p>{resultMessage || 'Проверка завершена'}</p>
+              <p className="update-subtitle">Окно закроется автоматически...</p>
             </div>
           )}
         </div>

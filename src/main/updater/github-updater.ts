@@ -1,6 +1,5 @@
-import { autoUpdater, UpdateInfo, UpdateDownloadedEvent, ProgressInfo } from 'electron-updater';
-import { dialog, BrowserWindow, app } from 'electron';
-import * as path from 'path';
+import { autoUpdater, UpdateInfo, ProgressInfo } from 'electron-updater';
+import { BrowserWindow, app } from 'electron';
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -111,7 +110,7 @@ export function initializeUpdater(window: BrowserWindow) {
     }
   });
 
-  autoUpdater.on('update-downloaded', (info: UpdateDownloadedEvent) => {
+  autoUpdater.on('update-downloaded', () => {
     console.log('[Updater] Обновление загружено');
     
     if (mainWindow) {
@@ -130,6 +129,7 @@ export function checkForUpdates() {
   console.log('[Updater] 🔍 Начинаем проверку обновлений...');
   console.log('[Updater] Текущая версия приложения:', app.getVersion());
   console.log('[Updater] URL обновлений: https://github.com/Actoric/SafeKey/releases');
+  console.log('[Updater] Репозиторий: Actoric/SafeKey');
   
   // Устанавливаем таймаут для проверки обновлений (30 секунд)
   const timeout = setTimeout(() => {
@@ -145,7 +145,11 @@ export function checkForUpdates() {
       console.log('[Updater] ✅ Проверка обновлений завершена');
       console.log('[Updater] Результат:', JSON.stringify(result, null, 2));
       if (result?.updateInfo) {
-        console.log('[Updater] Найдена версия:', result.updateInfo.version);
+        console.log('[Updater] ✅ Найдена версия:', result.updateInfo.version);
+        console.log('[Updater] Текущая версия:', app.getVersion());
+        console.log('[Updater] Новая версия больше текущей:', result.updateInfo.version > app.getVersion());
+      } else {
+        console.log('[Updater] ℹ️ Обновления не найдены - текущая версия:', app.getVersion());
       }
     })
     .catch((error) => {
@@ -171,11 +175,12 @@ export function checkForUpdates() {
       if (mainWindow) {
         if (isNoUpdateError) {
           // Это не ошибка, просто нет обновлений или проблемы с сетью
-          console.log('[Updater] Обновления не найдены (обработано как отсутствие обновлений)');
+          console.log('[Updater] ℹ️ Обновления не найдены (обработано как отсутствие обновлений)');
+          console.log('[Updater] Текущая версия приложения:', app.getVersion());
           mainWindow.webContents.send('update-not-available');
         } else {
           // Реальная ошибка - отправляем только если это не тихая проверка
-          console.error('[Updater] Реальная ошибка при проверке обновлений:', errorMessage);
+          console.error('[Updater] ❌ Реальная ошибка при проверке обновлений:', errorMessage);
           mainWindow.webContents.send('update-error', { message: errorMessage });
         }
       }
