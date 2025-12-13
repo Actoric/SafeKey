@@ -1,6 +1,6 @@
 {
   "name": "safekey",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "Менеджер паролей SafeKey",
   "main": "dist/main/main.js",
   "scripts": {
@@ -92,10 +92,11 @@
       ],
       "icon": "build/icon.ico",
       "requestedExecutionLevel": "asInvoker",
-      "artifactName": "${productName}-${version}-${arch}.${ext}",
+      "artifactName": "${productName}-Setup-${version}-${arch}.${ext}",
       "sign": false,
       "verifyUpdateCodeSignature": false,
-      "signDlls": false
+      "signDlls": false,
+      "publisherName": "SafeKey"
     },
     "portable": {
       "artifactName": "${productName}-${version}-${arch}.${ext}",

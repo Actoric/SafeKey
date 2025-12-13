@@ -1,5 +1,5 @@
 import { autoUpdater, UpdateInfo, UpdateDownloadedEvent, ProgressInfo } from 'electron-updater';
-import { dialog, BrowserWindow } from 'electron';
+import { dialog, BrowserWindow, app } from 'electron';
 import * as path from 'path';
 
 let mainWindow: BrowserWindow | null = null;
@@ -14,9 +14,20 @@ export function initializeUpdater(window: BrowserWindow) {
     repo: 'SafeKey',
   });
 
+  // Включаем подробное логирование
+  autoUpdater.logger = {
+    info: (message: string) => console.log('[Updater Info]', message),
+    warn: (message: string) => console.warn('[Updater Warn]', message),
+    error: (message: string) => console.error('[Updater Error]', message),
+    debug: (message: string) => console.log('[Updater Debug]', message),
+  };
+  
   // Настройка таймаутов для более быстрой проверки
   autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = true;
+  
+  console.log('[Updater] Инициализация обновлений для GitHub: Actoric/SafeKey');
+  console.log('[Updater] Текущая версия приложения:', app.getVersion());
 
   // Проверка обновлений при запуске (тихо, без уведомлений)
   // Используем checkForUpdates вместо checkForUpdatesAndNotify для лучшего контроля
@@ -32,31 +43,40 @@ export function initializeUpdater(window: BrowserWindow) {
   // События автообновления
   autoUpdater.on('checking-for-update', () => {
     console.log('[Updater] Проверка обновлений...');
+    console.log('[Updater] Текущая версия:', app.getVersion());
     if (mainWindow) {
       mainWindow.webContents.send('update-checking');
     }
   });
 
   autoUpdater.on('update-available', (info: UpdateInfo) => {
-    console.log('[Updater] Доступно обновление:', info.version);
+    console.log('[Updater] ✅ Доступно обновление!');
+    console.log('[Updater] Новая версия:', info.version);
+    console.log('[Updater] Текущая версия:', app.getVersion());
+    console.log('[Updater] Информация об обновлении:', JSON.stringify(info, null, 2));
     
     if (mainWindow) {
       // Отправляем событие в renderer для отображения UI обновления
       mainWindow.webContents.send('update-available', info);
       // Автоматически начинаем загрузку
+      console.log('[Updater] Начинаем загрузку обновления...');
       autoUpdater.downloadUpdate();
     }
   });
 
   autoUpdater.on('update-not-available', (info: UpdateInfo) => {
-    console.log('[Updater] Обновления не найдены - программа максимальной версии');
+    console.log('[Updater] ℹ️ Обновления не найдены - программа максимальной версии');
+    console.log('[Updater] Текущая версия:', app.getVersion());
+    console.log('[Updater] Информация:', JSON.stringify(info, null, 2));
     if (mainWindow) {
       mainWindow.webContents.send('update-not-available');
     }
   });
 
   autoUpdater.on('error', (err: Error) => {
-    console.error('[Updater] Ошибка:', err);
+    console.error('[Updater] ❌ Ошибка обновления:', err);
+    console.error('[Updater] Сообщение об ошибке:', err.message);
+    console.error('[Updater] Стек ошибки:', err.stack);
     if (mainWindow) {
       const errorMessage = err.message || err.toString() || 'Неизвестная ошибка';
       
@@ -75,6 +95,7 @@ export function initializeUpdater(window: BrowserWindow) {
         mainWindow.webContents.send('update-not-available');
       } else {
         // Реальная ошибка
+        console.error('[Updater] Отправляем ошибку в UI:', errorMessage);
         mainWindow.webContents.send('update-error', { message: errorMessage });
       }
     }
@@ -106,9 +127,13 @@ export function initializeUpdater(window: BrowserWindow) {
 }
 
 export function checkForUpdates() {
+  console.log('[Updater] 🔍 Начинаем проверку обновлений...');
+  console.log('[Updater] Текущая версия приложения:', app.getVersion());
+  console.log('[Updater] URL обновлений: https://github.com/Actoric/SafeKey/releases');
+  
   // Устанавливаем таймаут для проверки обновлений (30 секунд)
   const timeout = setTimeout(() => {
-    console.log('[Updater] Таймаут проверки обновлений (30 секунд)');
+    console.log('[Updater] ⏱️ Таймаут проверки обновлений (30 секунд)');
     if (mainWindow) {
       mainWindow.webContents.send('update-not-available');
     }
@@ -117,11 +142,18 @@ export function checkForUpdates() {
   autoUpdater.checkForUpdates()
     .then((result) => {
       clearTimeout(timeout);
-      console.log('[Updater] Проверка обновлений завершена:', result);
+      console.log('[Updater] ✅ Проверка обновлений завершена');
+      console.log('[Updater] Результат:', JSON.stringify(result, null, 2));
+      if (result?.updateInfo) {
+        console.log('[Updater] Найдена версия:', result.updateInfo.version);
+      }
     })
     .catch((error) => {
       clearTimeout(timeout);
-      console.error('[Updater] Ошибка при проверке обновлений:', error);
+      console.error('[Updater] ❌ Ошибка при проверке обновлений');
+      console.error('[Updater] Тип ошибки:', error?.constructor?.name);
+      console.error('[Updater] Сообщение:', error?.message);
+      console.error('[Updater] Полная ошибка:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
       const errorMessage = error?.message || error?.toString() || 'Неизвестная ошибка';
       
       // Проверяем, не является ли это просто отсутствием обновлений

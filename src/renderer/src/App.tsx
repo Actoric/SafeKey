@@ -5,6 +5,7 @@ import { MainLayout } from './components/MainLayout';
 import { OverlayWindow } from './components/OverlayWindow';
 import { TitleBar } from './components/TitleBar';
 import { UpdateProgress } from './components/UpdateProgress';
+import { Toast, ToastType } from './components/Toast';
 import { useAuth } from './hooks/useAuth';
 
 function App() {
@@ -15,6 +16,7 @@ function App() {
   const [updateVersion, setUpdateVersion] = useState<string>('');
   const [updateProgress, setUpdateProgress] = useState(0);
   const [updateError, setUpdateError] = useState<string>('');
+  const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
 
   // Логирование изменений состояния для отладки
   useEffect(() => {
@@ -81,6 +83,10 @@ function App() {
       }
       setUpdateVersion(info?.version || '');
       setUpdateStatus('downloading');
+      setToast({ 
+        message: `Доступно обновление до версии ${info?.version || 'новой'}. Начинается загрузка...`, 
+        type: 'success' 
+      });
     };
 
     const handleUpdateProgress = (_event: any, progressObj: any) => {
@@ -92,6 +98,10 @@ function App() {
     const handleUpdateDownloaded = () => {
       console.log('[App] Обновление загружено');
       setUpdateStatus('ready');
+      setToast({ 
+        message: 'Обновление загружено! Приложение будет перезапущено через несколько секунд.', 
+        type: 'success' 
+      });
     };
 
     const handleUpdateError = (_event: any, error: any) => {
@@ -128,11 +138,19 @@ function App() {
         console.log('[App] Ошибка сети при проверке обновлений, игнорируем');
         setUpdateStatus(null);
         setUpdateError('');
+        setToast({ 
+          message: 'Не удалось проверить обновления. Проверьте подключение к интернету.', 
+          type: 'error' 
+        });
         return;
       }
       
       setUpdateError(errorMessage);
       setUpdateStatus('error');
+      setToast({ 
+        message: `Ошибка обновления: ${errorMessage}. Пожалуйста, сообщите об этой проблеме разработчикам.`, 
+        type: 'error' 
+      });
     };
 
     const handleUpdateNotAvailable = () => {
@@ -143,6 +161,10 @@ function App() {
       }
       setUpdateStatus(null);
       setUpdateError('');
+      setToast({ 
+        message: 'Программа обновлена до последней версии', 
+        type: 'success' 
+      });
     };
 
     // Подписываемся на события обновления
@@ -211,6 +233,14 @@ function App() {
           status={updateStatus}
           error={updateError}
         />
+        {toast && (
+          <Toast
+            message={toast.message}
+            type={toast.type}
+            onClose={() => setToast(null)}
+            duration={toast.type === 'error' ? 8000 : 5000}
+          />
+        )}
       </>
     );
   }
@@ -222,6 +252,14 @@ function App() {
       <Routes>
         <Route path="*" element={<MainLayout />} />
       </Routes>
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+          duration={toast.type === 'error' ? 8000 : 5000}
+        />
+      )}
     </>
   );
 }
