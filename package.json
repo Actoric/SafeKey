@@ -1,6 +1,6 @@
 {
   "name": "safekey",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "Менеджер паролей SafeKey",
   "main": "dist/main/main.js",
   "scripts": {
