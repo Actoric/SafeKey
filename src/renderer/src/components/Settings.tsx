@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 import { CloudSettings, AppSettings } from '../../../shared/types';
+import { LANGUAGES } from '../utils/i18n';
 import './Settings.css';
 
 interface SettingsProps {
@@ -17,20 +18,48 @@ export function Settings({ onClose, onSaveSuccess, onSaveError }: SettingsProps)
   const [appSettings, setAppSettings] = useState<AppSettings>({
     overlayShortcut: 'CommandOrControl+Shift+P',
     openInOverlay: false,
+    language: 'ru',
   });
+  const [appVersion, setAppVersion] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const updateCheckTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     loadSettings();
+
+    // Подписываемся на события обновления
+    if (window.electronAPI && (window.electronAPI as any).ipcRenderer) {
+      const ipcRenderer = (window.electronAPI as any).ipcRenderer;
+      
+      const handleUpdateNotAvailable = () => {
+        if (updateCheckTimeoutRef.current) {
+          clearTimeout(updateCheckTimeoutRef.current);
+        }
+        setTimeout(() => {
+          alert('Программа обновлена до последней версии');
+        }, 500);
+      };
+
+      ipcRenderer.on('update-not-available', handleUpdateNotAvailable);
+
+      return () => {
+        ipcRenderer.removeAllListeners('update-not-available');
+        if (updateCheckTimeoutRef.current) {
+          clearTimeout(updateCheckTimeoutRef.current);
+        }
+      };
+    }
   }, []);
 
   const loadSettings = async () => {
     try {
       const cloud = await window.electronAPI.getCloudSettings();
       const app = await window.electronAPI.getAppSettings();
+      const version = await window.electronAPI.getAppVersion();
       setCloudSettings(cloud);
       setAppSettings(app);
+      setAppVersion(version);
     } catch (error) {
       console.error('Ошибка загрузки настроек:', error);
     } finally {
@@ -217,6 +246,9 @@ export function Settings({ onClose, onSaveSuccess, onSaveError }: SettingsProps)
           <section className="settings-section">
             <h3>Обновления</h3>
             <div className="settings-field">
+              <div style={{ marginBottom: '8px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                Текущая версия: <strong>{appVersion || 'Загрузка...'}</strong>
+              </div>
               <button
                 type="button"
                 className="secondary-button"
@@ -224,13 +256,22 @@ export function Settings({ onClose, onSaveSuccess, onSaveError }: SettingsProps)
                   try {
                     const result = await window.electronAPI.checkForUpdates();
                     if (result.success) {
-                      setTimeout(() => {
-                        alert('Проверка обновлений запущена. Вы будете уведомлены, если найдено обновление.');
-                      }, 0);
+                      // Не показываем alert сразу, ждем результата проверки
+                      // Сообщение будет показано через событие update-not-available или update-available
+                      updateCheckTimeoutRef.current = setTimeout(() => {
+                        // Если через 3 секунды не пришло событие, значит проверка еще идет
+                      }, 3000);
                     } else {
-                      setTimeout(() => {
-                        alert(result.message || 'Ошибка проверки обновлений');
-                      }, 0);
+                      // Если это сообщение о том, что обновлений нет
+                      if (result.message?.includes('не найдены') || result.message?.includes('not available') || result.message?.includes('максимальной')) {
+                        setTimeout(() => {
+                          alert('Программа обновлена до последней версии');
+                        }, 0);
+                      } else {
+                        setTimeout(() => {
+                          alert(result.message || 'Ошибка проверки обновлений');
+                        }, 0);
+                      }
                     }
                   } catch (error) {
                     console.error('Ошибка проверки обновлений:', error);
@@ -242,6 +283,40 @@ export function Settings({ onClose, onSaveSuccess, onSaveError }: SettingsProps)
               >
                 Проверить обновления
               </button>
+            </div>
+          </section>
+
+          <section className="settings-section">
+            <h3>Язык интерфейса</h3>
+            <div className="settings-field">
+              <label>
+                Выберите язык
+                <select
+                  value={appSettings.language || 'ru'}
+                  onChange={(e) =>
+                    setAppSettings({
+                      ...appSettings,
+                      language: e.target.value,
+                    })
+                  }
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    marginTop: '6px',
+                    border: '1px solid var(--border)',
+                    borderRadius: '6px',
+                    background: 'var(--bg-primary)',
+                    color: 'var(--text-primary)',
+                    fontSize: '14px',
+                  }}
+                >
+                  {LANGUAGES.map((lang) => (
+                    <option key={lang.code} value={lang.code}>
+                      {lang.flag} {lang.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
             </div>
           </section>
 

@@ -89,6 +89,7 @@ const electronAPI = {
   // App Settings
   getAppSettings: () => ipcRenderer.invoke('get-app-settings'),
   saveAppSettings: (settings: any) => ipcRenderer.invoke('save-app-settings', settings),
+  getAppVersion: () => ipcRenderer.invoke('get-app-version'),
   // Overlay
   openOverlay: () => ipcRenderer.invoke('open-overlay'),
   // Clipboard

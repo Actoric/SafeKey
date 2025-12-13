@@ -2,6 +2,16 @@ import { app, BrowserWindow, globalShortcut, ipcMain, screen, shell, Tray, Menu,
 import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
+// Получаем версию из package.json
+const packageJsonPath = path.join(__dirname, '../../package.json');
+let appVersion = '1.0.0';
+try {
+  const packageJsonContent = fs.readFileSync(packageJsonPath, 'utf-8');
+  const packageJson = JSON.parse(packageJsonContent);
+  appVersion = packageJson.version || '1.0.0';
+} catch (error) {
+  console.error('[Main] Ошибка чтения package.json:', error);
+}
 import { DatabaseService } from './database/database';
 import { EncryptionService } from './encryption/encryption';
 import { APP_CONFIG } from './config/app.config';
@@ -1014,8 +1024,13 @@ ipcMain.handle('window-close', () => {
 // Автообновление
 ipcMain.handle('check-for-updates', async () => {
   if (process.env.NODE_ENV !== 'development') {
-    checkForUpdates();
-    return { success: true };
+    try {
+      checkForUpdates();
+      return { success: true };
+    } catch (error) {
+      console.error('[Main] Ошибка проверки обновлений:', error);
+      return { success: false, message: 'Ошибка проверки обновлений' };
+    }
   }
   return { success: false, message: 'Обновления отключены в режиме разработки' };
 });
@@ -1031,6 +1046,11 @@ ipcMain.handle('get-app-settings', async () => {
       openInOverlay: false,
     };
   }
+});
+
+// Get App Version
+ipcMain.handle('get-app-version', async () => {
+  return appVersion;
 });
 
 ipcMain.handle('save-app-settings', async (_, settings: any) => {

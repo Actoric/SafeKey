@@ -9,6 +9,7 @@ export interface AppSettings {
   autoStart?: boolean;
   startMinimized?: boolean;
   minimizeToTray?: boolean;
+  language?: string;
 }
 
 function getSettingsFilePath(): string {
@@ -21,6 +22,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   autoStart: false,
   startMinimized: false,
   minimizeToTray: false,
+  language: 'ru',
 };
 
 export function loadAppSettings(): AppSettings {
@@ -35,6 +37,7 @@ export function loadAppSettings(): AppSettings {
         autoStart: settings.autoStart ?? DEFAULT_SETTINGS.autoStart,
         startMinimized: settings.startMinimized ?? DEFAULT_SETTINGS.startMinimized,
         minimizeToTray: settings.minimizeToTray ?? DEFAULT_SETTINGS.minimizeToTray,
+        language: settings.language ?? DEFAULT_SETTINGS.language,
       };
     }
   } catch (error) {

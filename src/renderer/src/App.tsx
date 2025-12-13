@@ -80,8 +80,41 @@ function App() {
 
     const handleUpdateError = (_event: any, error: any) => {
       console.error('[App] Ошибка обновления:', error);
-      setUpdateError(error?.message || 'Неизвестная ошибка');
+      const errorMessage = error?.message || error?.toString() || 'Неизвестная ошибка';
+      
+      // Проверяем, не является ли это просто отсутствием обновлений
+      const isNoUpdateError = 
+        errorMessage.includes('No update available') ||
+        errorMessage.includes('not available') ||
+        errorMessage.includes('already the latest version') ||
+        errorMessage.includes('latest version') ||
+        errorMessage.includes('404') ||
+        errorMessage.includes('Not Found');
+      
+      if (isNoUpdateError) {
+        // Это не ошибка, просто нет обновлений
+        console.log('[App] Обновления не найдены (обработано как отсутствие обновлений)');
+        setUpdateStatus(null);
+        return;
+      }
+      
+      // Реальная ошибка - показываем только серьезные ошибки
+      // Игнорируем ошибки сети при тихой проверке
+      if (errorMessage.includes('net::ERR_INTERNET_DISCONNECTED') || 
+          errorMessage.includes('network') ||
+          errorMessage.includes('timeout')) {
+        console.log('[App] Ошибка сети при проверке обновлений, игнорируем');
+        setUpdateStatus(null);
+        return;
+      }
+      
+      setUpdateError(errorMessage);
       setUpdateStatus('error');
+    };
+
+    const handleUpdateNotAvailable = () => {
+      console.log('[App] Обновления не найдены - программа максимальной версии');
+      setUpdateStatus(null);
     };
 
     // Подписываемся на события обновления
@@ -94,6 +127,7 @@ function App() {
       ipcRenderer.on('update-download-progress', handleUpdateProgress);
       ipcRenderer.on('update-downloaded', handleUpdateDownloaded);
       ipcRenderer.on('update-error', handleUpdateError);
+      ipcRenderer.on('update-not-available', handleUpdateNotAvailable);
 
       return () => {
         ipcRenderer.removeAllListeners('update-checking');
@@ -101,6 +135,7 @@ function App() {
         ipcRenderer.removeAllListeners('update-download-progress');
         ipcRenderer.removeAllListeners('update-downloaded');
         ipcRenderer.removeAllListeners('update-error');
+        ipcRenderer.removeAllListeners('update-not-available');
       };
     } else {
       console.warn('[App] ipcRenderer недоступен для событий обновления');

@@ -65,6 +65,7 @@ export interface ElectronAPI {
   // App settings
   getAppSettings: () => Promise<AppSettings>;
   saveAppSettings: (settings: AppSettings) => Promise<void>;
+  getAppVersion: () => Promise<string>;
   // Overlay
   openOverlay: () => Promise<void>;
   // Clipboard
@@ -116,6 +117,7 @@ export interface AppSettings {
   autoStart?: boolean;
   startMinimized?: boolean;
   minimizeToTray?: boolean;
+  language?: string;
 }
 
 export interface CreatePasswordEntryRequest {
