@@ -1,4 +1,4 @@
-import { app, BrowserWindow, globalShortcut, ipcMain, screen, shell, Tray, Menu, nativeImage } from 'electron';
+import { app, BrowserWindow, globalShortcut, ipcMain, screen, shell, Tray, Menu, nativeImage, desktopCapturer } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -17,6 +17,7 @@ import AutoLaunch from 'auto-launch';
 
 let mainWindow: BrowserWindow | null = null;
 let overlayWindow: BrowserWindow | null = null;
+let areaSelectorWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let currentOverlayShortcut: string = APP_CONFIG.shortcuts.overlay;
 let autoLauncher: AutoLaunch | null = null;
@@ -859,7 +860,16 @@ ipcMain.handle('sync-to-cloud', async () => {
         // Шифруем базу данных
         encryptionService!.encryptFile(dbPath, tempEncryptedPath);
         
-        const fileName = `safekey_backup_${Date.now()}.dat`;
+        // Используем фиксированное имя файла вместо временной метки
+        const fileName = 'safekey_backup.dat';
+        
+        // Получаем список существующих файлов резервных копий
+        const existingFiles = await yandexDisk.listFiles();
+        const backupFiles = existingFiles.filter(f => 
+          f.startsWith('safekey_backup') && (f.endsWith('.dat') || f.endsWith('.db'))
+        );
+        
+        // Загружаем новый файл (он перезапишет существующий с таким же именем)
         success = await yandexDisk.uploadFile(tempEncryptedPath, fileName);
         
         // Удаляем временные файлы
@@ -872,6 +882,23 @@ ipcMain.handle('sync-to-cloud', async () => {
 
         if (success) {
           console.log('[CloudSync] База данных успешно загружена на Яндекс.Диск');
+          
+          // Удаляем все старые файлы резервных копий, кроме текущего
+          let deletedCount = 0;
+          for (const oldFile of backupFiles) {
+            if (oldFile !== fileName) {
+              const deleted = await yandexDisk.deleteFile(oldFile);
+              if (deleted) {
+                deletedCount++;
+                console.log(`[CloudSync] Удален старый файл резервной копии: ${oldFile}`);
+              }
+            }
+          }
+          
+          if (deletedCount > 0) {
+            console.log(`[CloudSync] Удалено старых файлов резервных копий: ${deletedCount}`);
+          }
+          
           // Проверяем, что файл действительно загружен
           const exists = await yandexDisk.fileExists(fileName);
           if (!exists) {
@@ -926,17 +953,29 @@ ipcMain.handle('check-cloud-sync', async () => {
     );
 
     const files = await yandexDisk.listFiles();
-    const backupFiles = files.filter(f => f.startsWith('safekey_backup_') && f.endsWith('.db'));
+    const backupFiles = files.filter(f => 
+      f.startsWith('safekey_backup') && (f.endsWith('.dat') || f.endsWith('.db'))
+    );
     
     if (backupFiles.length > 0) {
-      // Сортируем по имени (которое содержит timestamp) и берем последний
-      backupFiles.sort().reverse();
-      const latestFile = backupFiles[0];
-      return { 
-        synced: true, 
-        message: `Последняя синхронизация: ${latestFile}`,
-        files: backupFiles 
-      };
+      // Проверяем наличие основного файла
+      const mainBackupFile = backupFiles.find(f => f === 'safekey_backup.dat');
+      if (mainBackupFile) {
+        return { 
+          synced: true, 
+          message: `Синхронизировано: ${mainBackupFile}`,
+          files: backupFiles 
+        };
+      } else {
+        // Если есть только старые файлы с временными метками
+        backupFiles.sort().reverse();
+        const latestFile = backupFiles[0];
+        return { 
+          synced: true, 
+          message: `Найдена старая резервная копия: ${latestFile}`,
+          files: backupFiles 
+        };
+      }
     } else {
       return { synced: false, message: 'Файлы резервных копий не найдены на Яндекс.Диске' };
     }
@@ -1037,4 +1076,138 @@ ipcMain.handle('copy-to-clipboard', async (_, text: string) => {
 ipcMain.handle('open-url', async (_, url: string) => {
   await shell.openExternal(url);
   return { success: true };
+});
+
+// Area Selector
+function createAreaSelectorWindow() {
+  if (areaSelectorWindow) {
+    areaSelectorWindow.focus();
+    return;
+  }
+
+  const displays = screen.getAllDisplays();
+  const primaryDisplay = displays[0];
+  const { width, height } = primaryDisplay.size;
+
+  areaSelectorWindow = new BrowserWindow({
+    width: width,
+    height: height,
+    x: primaryDisplay.bounds.x,
+    y: primaryDisplay.bounds.y,
+    frame: false,
+    transparent: true,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    resizable: false,
+    movable: false,
+    minimizable: false,
+    maximizable: false,
+    closable: false,
+    focusable: true,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      nodeIntegration: false,
+      contextIsolation: true,
+      sandbox: false,
+    },
+  });
+
+  // Загружаем HTML для селектора области
+  if (process.env.NODE_ENV === 'development') {
+    areaSelectorWindow.loadURL('http://localhost:5173/#area-selector');
+  } else {
+    areaSelectorWindow.loadFile(path.join(__dirname, '../renderer/index.html'), {
+      hash: 'area-selector',
+    });
+  }
+
+  areaSelectorWindow.setIgnoreMouseEvents(false, { forward: true });
+  areaSelectorWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  areaSelectorWindow.show();
+
+  areaSelectorWindow.on('closed', () => {
+    areaSelectorWindow = null;
+  });
+}
+
+ipcMain.handle('start-area-selection', async () => {
+  try {
+    createAreaSelectorWindow();
+    return { success: true };
+  } catch (error) {
+    console.error('[Main] Ошибка создания окна выделения области:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Неизвестная ошибка' };
+  }
+});
+
+ipcMain.handle('close-area-selector', async () => {
+  if (areaSelectorWindow) {
+    areaSelectorWindow.close();
+    areaSelectorWindow = null;
+  }
+  return { success: true };
+});
+
+ipcMain.handle('capture-area-screenshot', async (_, bounds: { x: number; y: number; width: number; height: number }) => {
+  try {
+    const displays = screen.getAllDisplays();
+    const maxWidth = Math.max(...displays.map(d => d.bounds.x + d.bounds.width));
+    const maxHeight = Math.max(...displays.map(d => d.bounds.y + d.bounds.height));
+    const primaryDisplay = displays[0];
+
+    const sources = await desktopCapturer.getSources({
+      types: ['screen'],
+      thumbnailSize: { width: maxWidth, height: maxHeight }
+    });
+
+    if (sources.length === 0) {
+      throw new Error('Не удалось получить источники экрана');
+    }
+
+    // Находим нужный дисплей по координатам
+    const targetDisplay = displays.find(d => 
+      bounds.x >= d.bounds.x && 
+      bounds.x < d.bounds.x + d.bounds.width &&
+      bounds.y >= d.bounds.y && 
+      bounds.y < d.bounds.y + d.bounds.height
+    ) || primaryDisplay;
+
+    // Находим источник для нужного дисплея
+    const targetSource = sources.find(s => s.display_id === targetDisplay.id.toString()) || sources[0];
+    const img = targetSource.thumbnail;
+
+    // Вычисляем координаты относительно дисплея
+    const relativeX = bounds.x - targetDisplay.bounds.x;
+    const relativeY = bounds.y - targetDisplay.bounds.y;
+
+    // Обрезаем изображение по выбранной области
+    const cropBounds = {
+      x: Math.max(0, Math.min(relativeX, img.getSize().width)),
+      y: Math.max(0, Math.min(relativeY, img.getSize().height)),
+      width: Math.min(bounds.width, img.getSize().width - Math.max(0, relativeX)),
+      height: Math.min(bounds.height, img.getSize().height - Math.max(0, relativeY)),
+    };
+
+    const cropped = img.crop(cropBounds);
+    
+    // Сохраняем во временную папку
+    const tempPath = path.join(app.getPath('temp'), `safekey-screenshot-${Date.now()}.png`);
+    const buffer = cropped.toPNG();
+    fs.writeFileSync(tempPath, buffer);
+
+    // Копируем в буфер обмена
+    clipboard.writeImage(cropped);
+
+    return { 
+      success: true, 
+      path: tempPath,
+      dataURL: cropped.toDataURL()
+    };
+  } catch (error) {
+    console.error('[Main] Ошибка захвата скриншота:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Неизвестная ошибка' 
+    };
+  }
 });

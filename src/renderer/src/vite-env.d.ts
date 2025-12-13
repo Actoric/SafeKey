@@ -4,10 +4,6 @@ import { ElectronAPI } from '../../shared/types';
 
 declare global {
   interface Window {
-    electronAPI: ElectronAPI & {
-      minimize?: () => Promise<void>;
-      maximize?: () => Promise<void>;
-      close?: () => Promise<void>;
-    };
+    electronAPI: ElectronAPI;
   }
 }

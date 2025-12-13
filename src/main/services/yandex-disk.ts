@@ -191,6 +191,33 @@ export class YandexDiskService {
   }
 
   /**
+   * Удалить файл с Яндекс.Диска
+   */
+  async deleteFile(remoteFileName: string): Promise<boolean> {
+    try {
+      // Нормализуем basePath
+      let normalizedBasePath = this.basePath.trim();
+      if (normalizedBasePath.startsWith('/')) {
+        normalizedBasePath = normalizedBasePath.substring(1);
+      }
+      const remotePath = normalizedBasePath ? `disk:/${normalizedBasePath}/${remoteFileName}` : `disk:/${remoteFileName}`;
+      const url = `https://cloud-api.yandex.net/v1/disk/resources?path=${encodeURIComponent(remotePath)}&permanently=true`;
+      const response = await httpRequest(url, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `OAuth ${this.token}`,
+        },
+      });
+      
+      // 204 - успешное удаление, 404 - файл не найден (уже удален)
+      return response.status === 204 || response.status === 404;
+    } catch (error) {
+      console.error('[YandexDisk] Ошибка удаления файла:', error);
+      return false;
+    }
+  }
+
+  /**
    * Убедиться, что директория существует на диске
    */
   private async ensureDirectory(dirPath: string): Promise<boolean> {

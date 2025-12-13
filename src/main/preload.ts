@@ -95,6 +95,11 @@ const electronAPI = {
   copyToClipboard: (text: string) => ipcRenderer.invoke('copy-to-clipboard', text),
   // URL
   openUrl: (url: string) => ipcRenderer.invoke('open-url', url),
+  // Area Selector
+  startAreaSelection: () => ipcRenderer.invoke('start-area-selection'),
+  closeAreaSelector: () => ipcRenderer.invoke('close-area-selector'),
+  captureAreaScreenshot: (bounds: { x: number; y: number; width: number; height: number }) =>
+    ipcRenderer.invoke('capture-area-screenshot', bounds),
   // IPC Renderer для подписки на события
   ipcRenderer: {
     on: (channel: string, callback: (...args: any[]) => void) => {

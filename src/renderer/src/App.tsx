@@ -5,6 +5,7 @@ import { MainLayout } from './components/MainLayout';
 import { OverlayWindow } from './components/OverlayWindow';
 import { TitleBar } from './components/TitleBar';
 import { UpdateProgress } from './components/UpdateProgress';
+import { AreaSelector } from './components/AreaSelector';
 import { useAuth } from './hooks/useAuth';
 
 function App() {
@@ -117,6 +118,32 @@ function App() {
   // Оверлей
   if (location.hash === '#overlay') {
     return <OverlayWindow />;
+  }
+
+  // Селектор области
+  if (location.hash === '#area-selector') {
+    return (
+      <AreaSelector
+        onSelect={async (bounds) => {
+          try {
+            const result = await window.electronAPI.captureAreaScreenshot(bounds);
+            if (result.success) {
+              console.log('Скриншот сохранен:', result.path);
+              await window.electronAPI.closeAreaSelector();
+            } else {
+              console.error('Ошибка захвата скриншота:', result.error);
+              await window.electronAPI.closeAreaSelector();
+            }
+          } catch (error) {
+            console.error('Ошибка:', error);
+            await window.electronAPI.closeAreaSelector();
+          }
+        }}
+        onCancel={async () => {
+          await window.electronAPI.closeAreaSelector();
+        }}
+      />
+    );
   }
 
   // Если не авторизован

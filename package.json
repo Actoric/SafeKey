@@ -1,6 +1,6 @@
 {
   "name": "safekey",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Менеджер паролей SafeKey",
   "main": "dist/main/main.js",
   "scripts": {
@@ -39,7 +39,7 @@
     "@vitejs/plugin-react": "^4.2.1",
     "concurrently": "^8.2.2",
     "cross-env": "^7.0.3",
-    "electron": "^28.0.0",
+    "electron": "^28.3.3",
     "electron-builder": "^24.9.1",
     "eslint": "^8.55.0",
     "eslint-plugin-react-hooks": "^4.6.0",

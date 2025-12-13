@@ -129,12 +129,12 @@
 }
 
 .primary-button {
-  background: #4a90e2;
+  background: var(--accent);
   color: white;
 }
 
 .primary-button:hover {
-  background: #357abd;
+  background: var(--accent-hover);
 }
 
 .secondary-button {
@@ -166,8 +166,8 @@
 }
 
 .entry-item.selected {
-  background: #e3f2fd;
-  border-left: 3px solid #4a90e2;
+  background: rgba(37, 99, 235, 0.1);
+  border-left: 3px solid var(--accent);
 }
 
 .entry-title {
