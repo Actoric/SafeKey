@@ -2,7 +2,7 @@
 ; Использование: откройте этот файл в Inno Setup Compiler и нажмите "Build"
 
 #define MyAppName "SafeKey"
-#define MyAppVersion "1.1.2"
+#define MyAppVersion "1.1.3"
 #define MyAppPublisher "SafeKey"
 #define MyAppExeName "SafeKey.exe"
 #define MyAppSourceDir "release\win-unpacked"
@@ -10,7 +10,7 @@
 
 [Setup]
 ; Основные настройки
-AppId={{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}
+AppId={{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
