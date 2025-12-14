@@ -65,13 +65,14 @@ function createMainWindow() {
     maximizable: false, // Запрещаем развертывание на весь экран
     frame: false,
     titleBarStyle: 'hidden',
-    title: 'SafeKey', // Устанавливаем заголовок окна
-    icon: iconPath, // Явно указываем иконку для окна
+    title: 'SafeKey',
+    icon: iconPath,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: false,
+      devTools: process.env.NODE_ENV === 'development', // DevTools только в режиме разработки
     },
     show: false,
     backgroundColor: '#ffffff',
@@ -82,17 +83,9 @@ function createMainWindow() {
     mainWindow.webContents.openDevTools();
   } else {
     mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
+    // DevTools отключены в production для обычных пользователей
+    // Для отладки можно открыть через Ctrl+Shift+I (если включено в настройках)
   }
-
-  // Отключаем DevTools в production
-  mainWindow.webContents.on('before-input-event', (event, input) => {
-    // Блокируем F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U
-    if (input.key === 'F12' || 
-        (input.control && input.shift && (input.key === 'I' || input.key === 'J')) ||
-        (input.control && input.key === 'U')) {
-      event.preventDefault();
-    }
-  });
 
   mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription) => {
     console.error('[Main] Ошибка загрузки:', errorCode, errorDescription);
@@ -111,10 +104,8 @@ function createMainWindow() {
       } else {
         mainWindow.show();
       }
-      // Инициализируем автообновление после показа окна
-      if (process.env.NODE_ENV !== 'development') {
-        initializeUpdater(mainWindow);
-      }
+      // Инициализируем автообновление после показа окна (включаем и в режиме разработки)
+      initializeUpdater(mainWindow);
     }
   });
 
@@ -261,6 +252,7 @@ function createOverlayWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: false,
+      devTools: process.env.NODE_ENV === 'development', // DevTools только в режиме разработки
     },
   });
 
