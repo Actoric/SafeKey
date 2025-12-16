@@ -4,12 +4,13 @@ import './UpdateProgress.css';
 interface UpdateProgressProps {
   version?: string;
   progress?: number;
-  status: 'checking' | 'downloading' | 'downloaded' | 'error' | 'ready' | 'completed';
+  status: 'checking' | 'available' | 'downloading' | 'downloaded' | 'error' | 'ready' | 'completed';
   error?: string;
   resultMessage?: string;
+  onDownload?: () => void;
 }
 
-export function UpdateProgress({ version, progress = 0, status, error, resultMessage }: UpdateProgressProps) {
+export function UpdateProgress({ version, progress = 0, status, error, resultMessage, onDownload }: UpdateProgressProps) {
   // Всегда показываем, если есть статус обновления
   if (!status) return null;
 
@@ -25,6 +26,20 @@ export function UpdateProgress({ version, progress = 0, status, error, resultMes
             <div className="update-status">
               <div className="update-spinner"></div>
               <p>Проверка обновлений...</p>
+            </div>
+          )}
+
+          {status === 'available' && (
+            <div className="update-status">
+              <Download size={32} className="update-icon" />
+              <p>Доступно обновление до версии {version}</p>
+              <p className="update-subtitle">Нажмите "Обновить" для начала загрузки</p>
+              <button 
+                className="update-download-btn"
+                onClick={onDownload}
+              >
+                Обновить
+              </button>
             </div>
           )}
 
@@ -56,7 +71,7 @@ export function UpdateProgress({ version, progress = 0, status, error, resultMes
             <div className="update-status">
               <CheckCircle size={32} className="update-icon success" />
               <p>Обновление готово к установке</p>
-              <p className="update-subtitle">Приложение будет перезапущено</p>
+              <p className="update-subtitle">Приложение будет автоматически перезапущено через несколько секунд...</p>
             </div>
           )}
 

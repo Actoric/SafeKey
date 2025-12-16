@@ -61,6 +61,7 @@ export interface ElectronAPI {
   saveCloudSettings: (settings: CloudSettings) => Promise<void>;
   syncToCloud: () => Promise<boolean>;
   authorizeYandexDisk: () => Promise<{ success: boolean; token?: string }>;
+  authorizeGoogleDrive: () => Promise<{ success: boolean; token?: string }>;
   checkCloudSync: () => Promise<{ synced: boolean; message: string; files?: string[] }>;
   // App settings
   getAppSettings: () => Promise<AppSettings>;
@@ -92,6 +93,13 @@ export interface ElectronAPI {
   decryptSecurityQuestionEntry: (entry: DatabaseSecurityQuestionEntry) => Promise<SecurityQuestionEntryData>;
   // Auto Updater
   checkForUpdates: () => Promise<{ success: boolean; message?: string }>;
+  downloadUpdate: () => Promise<void>;
+  installUpdate: () => Promise<void>;
+  // Auth
+  initEncryption: () => Promise<{ success: boolean }>;
+  verifyWindowsPin: () => Promise<boolean>;
+  checkWindowsPinAvailable: () => Promise<boolean>;
+  getWindowsUsername: () => Promise<string>;
 }
 
 export interface CloudSettings {

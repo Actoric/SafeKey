@@ -53,6 +53,7 @@ const electronAPI = {
   saveCloudSettings: (settings: any) =>
     ipcRenderer.invoke('save-cloud-settings', settings),
   authorizeYandexDisk: () => ipcRenderer.invoke('authorize-yandex-disk'),
+  authorizeGoogleDrive: () => ipcRenderer.invoke('authorize-google-drive'),
   syncToCloud: () => ipcRenderer.invoke('sync-to-cloud'),
   checkCloudSync: () => ipcRenderer.invoke('check-cloud-sync'),
   getWindowsUsername: () => ipcRenderer.invoke('get-windows-username'),
@@ -86,6 +87,8 @@ const electronAPI = {
     ipcRenderer.invoke('decrypt-security-question-entry', entry),
   // Auto Updater
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+  downloadUpdate: () => ipcRenderer.invoke('download-update'),
+  installUpdate: () => ipcRenderer.invoke('install-update'),
   // App Settings
   getAppSettings: () => ipcRenderer.invoke('get-app-settings'),
   saveAppSettings: (settings: any) => ipcRenderer.invoke('save-app-settings', settings),
@@ -99,7 +102,13 @@ const electronAPI = {
   // IPC Renderer для подписки на события
   ipcRenderer: {
     on: (channel: string, callback: (...args: any[]) => void) => {
-      ipcRenderer.on(channel, (event, ...args) => callback(...args));
+      ipcRenderer.on(channel, (_event, ...args) => {
+        // Логируем для отладки событий обновления
+        if (channel.startsWith('update-')) {
+          console.log(`[Preload] Событие ${channel} получено, аргументы:`, args);
+        }
+        callback(...args);
+      });
     },
     removeAllListeners: (channel: string) => {
       ipcRenderer.removeAllListeners(channel);

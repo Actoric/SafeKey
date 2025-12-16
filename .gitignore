@@ -12,6 +12,8 @@ node_modules/
 /build
 *.db
 *.db-journal
+latest.yml
+latest-*.yml
 
 # Misc
 .DS_Store
@@ -46,3 +48,6 @@ lerna-debug.log*
 *.pem
 secrets/
 master.key
+
+# Backup files
+backup/

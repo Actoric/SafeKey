@@ -1,6 +1,6 @@
 {
   "name": "safekey",
-  "version": "1.1.4",
+  "version": "1.1.7",
   "description": "Менеджер паролей SafeKey",
   "main": "dist/main/main.js",
   "scripts": {
@@ -12,8 +12,7 @@
     "build:renderer": "vite build",
     "build:main": "tsc -p tsconfig.main.json && tsc -p tsconfig.preload.json",
     "build:win": "npm run build && electron-builder --win",
-    "build:win:dir": "npm run build && electron-builder --win --dir",
-    "build:win64": "npm run build && electron-builder --win --x64",
+    "dist:win": "npm run build && electron-builder --win",
     "preview": "vite preview",
     "package": "npm run build && electron-builder",
     "package:win": "npm run build:win",
@@ -62,6 +61,7 @@
     "appId": "com.safekey.app",
     "productName": "SafeKey",
     "copyright": "Copyright © 2024 SafeKey",
+    "forceCodeSigning": false,
     "directories": {
       "output": "release",
       "buildResources": "build"
@@ -84,24 +84,20 @@
     "win": {
       "target": [
         {
-          "target": "dir",
+          "target": "nsis",
           "arch": [
             "x64"
           ]
         }
       ],
-      "extraFiles": [],
       "icon": "build/icon.ico",
       "requestedExecutionLevel": "asInvoker",
       "artifactName": "${productName}-Setup-${version}-${arch}.${ext}",
-      "sign": false,
-      "verifyUpdateCodeSignature": false,
+      "sign": null,
+      "signingHashAlgorithms": null,
       "signDlls": false,
-      "publisherName": "SafeKey"
-    },
-    "portable": {
-      "artifactName": "${productName}-${version}-${arch}.${ext}",
-      "requestExecutionLevel": "user"
+      "publisherName": "SafeKey",
+      "verifyUpdateCodeSignature": false
     },
     "nsis": {
       "oneClick": false,

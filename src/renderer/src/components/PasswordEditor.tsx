@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useImperativeHandle, forwardRef } from 'react';
+import React from 'react';
 import { PasswordEntry, Category } from '../../../shared/types';
 import { PasswordGenerator } from './PasswordGenerator';
 import { Copy, Eye, EyeOff, ExternalLink } from 'lucide-react';
@@ -12,7 +13,8 @@ interface PasswordEditorProps {
   selectedCategoryId?: number | null;
 }
 
-export function PasswordEditor({ password, onSave, onCancel, selectedCategoryId }: PasswordEditorProps) {
+export const PasswordEditor = forwardRef<{ refreshCategories: () => void }, PasswordEditorProps>(
+  ({ password, onSave, onCancel, selectedCategoryId, onCategoryCreated }, ref) => {
   const [service, setService] = useState('');
   const [login, setLogin] = useState('');
   const [pass, setPass] = useState('');
@@ -26,6 +28,14 @@ export function PasswordEditor({ password, onSave, onCancel, selectedCategoryId 
   useEffect(() => {
     loadCategories();
   }, []);
+
+  // Обновляем список категорий при каждом открытии редактора
+  useEffect(() => {
+    if (!password) {
+      // При создании нового пароля обновляем список категорий
+      loadCategories();
+    }
+  }, [password]);
 
   useEffect(() => {
     if (password) {
@@ -57,16 +67,24 @@ export function PasswordEditor({ password, onSave, onCancel, selectedCategoryId 
     }
   };
 
-  const renderCategoryOption = (category: Category, level: number = 0): JSX.Element => {
+  // Expose refreshCategories method via ref
+  useImperativeHandle(ref, () => ({
+    refreshCategories: loadCategories
+  }));
+
+  const renderCategoryOption = (category: Category, level: number = 0): JSX.Element[] => {
     const children = categories.filter(c => c.parent_id === category.id);
-    return (
-      <>
-        <option key={category.id} value={category.id}>
-          {'  '.repeat(level)}📁 {category.name}
-        </option>
-        {children.map(child => renderCategoryOption(child, level + 1))}
-      </>
-    );
+    const result: JSX.Element[] = [
+      <option key={category.id} value={category.id}>
+        {'  '.repeat(level)}📁 {category.name}
+      </option>
+    ];
+    
+    children.forEach(child => {
+      result.push(...renderCategoryOption(child, level + 1));
+    });
+    
+    return result;
   };
 
 
@@ -247,7 +265,7 @@ export function PasswordEditor({ password, onSave, onCancel, selectedCategoryId 
             onChange={(e) => setCategoryId(e.target.value ? parseInt(e.target.value) : null)}
           >
             <option value="">Без раскладки</option>
-            {categories.filter(c => c.parent_id === null).map(cat => renderCategoryOption(cat))}
+            {categories.filter(c => c.parent_id === null).flatMap(cat => renderCategoryOption(cat))}
           </select>
         </div>
 
@@ -262,4 +280,4 @@ export function PasswordEditor({ password, onSave, onCancel, selectedCategoryId 
       </form>
     </div>
   );
-}
+});

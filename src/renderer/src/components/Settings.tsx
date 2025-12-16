@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 import { CloudSettings, AppSettings } from '../../../shared/types';
-import { LANGUAGES } from '../utils/i18n';
+import { LANGUAGES, setLanguage } from '../utils/i18n';
+import { useTranslation } from '../hooks/useTranslation';
 import './Settings.css';
 
 interface SettingsProps {
@@ -11,6 +12,7 @@ interface SettingsProps {
 }
 
 export function Settings({ onClose, onSaveSuccess, onSaveError }: SettingsProps) {
+  const t = useTranslation();
   const [cloudSettings, setCloudSettings] = useState<CloudSettings>({
     yandexDisk: { enabled: false, token: '', path: '' },
     googleDrive: { enabled: false, token: '', folderId: '' },
@@ -72,6 +74,10 @@ export function Settings({ onClose, onSaveSuccess, onSaveError }: SettingsProps)
     try {
       await window.electronAPI.saveCloudSettings(cloudSettings);
       await window.electronAPI.saveAppSettings(appSettings);
+      // Обновляем язык после сохранения
+      if (appSettings.language) {
+        setLanguage(appSettings.language);
+      }
       onClose();
       if (onSaveSuccess) {
         onSaveSuccess();
@@ -244,10 +250,10 @@ export function Settings({ onClose, onSaveSuccess, onSaveError }: SettingsProps)
           </section>
 
           <section className="settings-section">
-            <h3>Обновления</h3>
+            <h3>{t.settings.updates}</h3>
             <div className="settings-field">
               <div style={{ marginBottom: '8px', fontSize: '12px', color: 'var(--text-secondary)' }}>
-                Текущая версия: <strong>{appVersion || 'Загрузка...'}</strong>
+                {t.settings.currentVersion}: <strong>{appVersion || t.common.loading}</strong>
               </div>
               <button
                 type="button"
@@ -281,16 +287,16 @@ export function Settings({ onClose, onSaveSuccess, onSaveError }: SettingsProps)
                   }
                 }}
               >
-                Проверить обновления
+                {t.settings.checkUpdates}
               </button>
             </div>
           </section>
 
           <section className="settings-section">
-            <h3>Язык интерфейса</h3>
+            <h3>{t.settings.language}</h3>
             <div className="settings-field">
               <label>
-                Выберите язык
+                {t.settings.selectLanguage}
                 <select
                   value={appSettings.language || 'ru'}
                   onChange={(e) =>
@@ -432,30 +438,59 @@ export function Settings({ onClose, onSaveSuccess, onSaveError }: SettingsProps)
                 <div className="settings-field">
                   <label>
                     Токен доступа
-                    <input
-                      type="text"
-                      placeholder="Введите токен Google Drive"
-                      value={cloudSettings.googleDrive.token || ''}
-                      onChange={(e) =>
-                        setCloudSettings({
-                          ...cloudSettings,
-                          googleDrive: {
-                            ...cloudSettings.googleDrive!,
-                            token: e.target.value,
-                          },
-                        })
-                      }
-                    />
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <input
+                        type="text"
+                        placeholder="Токен будет получен автоматически"
+                        value={cloudSettings.googleDrive.token || ''}
+                        onChange={(e) =>
+                          setCloudSettings({
+                            ...cloudSettings,
+                            googleDrive: {
+                              ...cloudSettings.googleDrive!,
+                              token: e.target.value,
+                            },
+                          })
+                        }
+                        readOnly={!!cloudSettings.googleDrive.token}
+                        style={{ flex: 1 }}
+                      />
+                      <button
+                        type="button"
+                        className="small-button"
+                        onClick={async () => {
+                          // Выполняем авторизацию асинхронно, не блокируя UI
+                          window.electronAPI.authorizeGoogleDrive().then((result) => {
+                            if (result.success && result.token) {
+                              setCloudSettings({
+                                ...cloudSettings,
+                                googleDrive: {
+                                  ...cloudSettings.googleDrive!,
+                                  token: result.token,
+                                },
+                              });
+                              setTimeout(() => {
+                                alert('Авторизация успешна! Токен сохранен.');
+                              }, 0);
+                            } else {
+                              setTimeout(() => {
+                                alert('Авторизация не удалась. Попробуйте еще раз.');
+                              }, 0);
+                            }
+                          }).catch((error) => {
+                            console.error('Ошибка авторизации Google Drive:', error);
+                            setTimeout(() => {
+                              alert('Ошибка авторизации: ' + (error instanceof Error ? error.message : 'Неизвестная ошибка'));
+                            }, 0);
+                          });
+                        }}
+                      >
+                        {cloudSettings.googleDrive.token ? 'Обновить токен' : 'Авторизоваться'}
+                      </button>
+                    </div>
                   </label>
                   <small>
-                    Получить токен можно в{' '}
-                    <a
-                      href="https://console.cloud.google.com/apis/credentials"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Google Cloud Console
-                    </a>
+                    Нажмите "Авторизоваться" для автоматического получения токена через OAuth
                   </small>
                 </div>
                 <div className="settings-field">
@@ -484,10 +519,10 @@ export function Settings({ onClose, onSaveSuccess, onSaveError }: SettingsProps)
 
         <div className="settings-footer">
           <button className="secondary-button" onClick={onClose}>
-            Отмена
+            {t.common.cancel}
           </button>
           <button className="primary-button" onClick={handleSave} disabled={saving}>
-            {saving ? 'Сохранение...' : 'Сохранить'}
+            {saving ? t.common.loading : t.common.save}
           </button>
         </div>
       </div>

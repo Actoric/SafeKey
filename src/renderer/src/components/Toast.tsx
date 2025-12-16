@@ -1,8 +1,8 @@
 import { useEffect } from 'react';
-import { CheckCircle, XCircle, X } from 'lucide-react';
+import { CheckCircle, XCircle, Info, X } from 'lucide-react';
 import './Toast.css';
 
-export type ToastType = 'success' | 'error';
+export type ToastType = 'success' | 'error' | 'info';
 
 interface ToastProps {
   message: string;
@@ -20,10 +20,23 @@ export function Toast({ message, type, onClose, duration = 3000 }: ToastProps) {
     return () => clearTimeout(timer);
   }, [duration, onClose]);
 
+  const getIcon = () => {
+    switch (type) {
+      case 'success':
+        return <CheckCircle size={20} />;
+      case 'error':
+        return <XCircle size={20} />;
+      case 'info':
+        return <Info size={20} />;
+      default:
+        return <Info size={20} />;
+    }
+  };
+
   return (
     <div className={`toast toast-${type}`}>
       <div className="toast-icon">
-        {type === 'success' ? <CheckCircle size={20} /> : <XCircle size={20} />}
+        {getIcon()}
       </div>
       <div className="toast-message">{message}</div>
       <button className="toast-close" onClick={onClose}>

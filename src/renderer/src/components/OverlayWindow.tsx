@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Search, X, Copy, Eye, EyeOff, User, Globe } from 'lucide-react';
 import { copyToClipboard } from '../utils/clipboard';
+import { useTranslation } from '../hooks/useTranslation';
 import './OverlayWindow.css';
 
 export function OverlayWindow() {
+  const t = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [passwords, setPasswords] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -45,7 +47,7 @@ export function OverlayWindow() {
     // Показываем уведомление о копировании
     const notification = document.createElement('div');
     notification.className = 'overlay-notification';
-    notification.textContent = 'Скопировано!';
+    notification.textContent = t.common.copied;
     document.body.appendChild(notification);
     setTimeout(() => {
       notification.remove();
@@ -82,7 +84,7 @@ export function OverlayWindow() {
             <Search size={18} />
             <input
               type="text"
-              placeholder="Поиск пароля..."
+              placeholder={t.overlay.searchPlaceholder}
               value={searchQuery}
               onChange={(e) => handleSearch(e.target.value)}
               autoFocus
@@ -98,9 +100,9 @@ export function OverlayWindow() {
 
         <div className="overlay-results">
           {loading ? (
-            <div className="overlay-loading">Поиск...</div>
+            <div className="overlay-loading">{t.overlay.searching}</div>
           ) : filteredPasswords.length === 0 ? (
-            <div className="overlay-empty">Пароли не найдены</div>
+            <div className="overlay-empty">{t.overlay.noResults}</div>
           ) : (
             filteredPasswords.map((password) => {
               const isExpanded = expandedPasswords.has(password.id);
@@ -109,8 +111,8 @@ export function OverlayWindow() {
                 <div key={password.id} className={`overlay-item ${isExpanded ? 'expanded' : ''}`}>
                   <div className="overlay-item-header" onClick={() => toggleExpand(password.id)}>
                     <div className="overlay-item-info">
-                      <div className="overlay-item-title">{password.data?.service || password.title || 'Без названия'}</div>
-                      <div className="overlay-item-subtitle">{password.data?.login || 'Нет логина'}</div>
+                      <div className="overlay-item-title">{password.data?.service || password.title || t.passwords.service}</div>
+                      <div className="overlay-item-subtitle">{password.data?.login || t.passwords.login}</div>
                     </div>
                     <div className="overlay-item-actions">
                       <button
@@ -128,14 +130,14 @@ export function OverlayWindow() {
                   {isExpanded && (
                     <div className="overlay-item-details">
                       <div className="overlay-detail-row">
-                        <span className="overlay-detail-label"><User size={14} /> Логин:</span>
+                        <span className="overlay-detail-label"><User size={14} /> {t.passwords.login}:</span>
                         <div className="overlay-detail-value">
-                          <span>{password.data?.login || 'Нет логина'}</span>
+                          <span>{password.data?.login || t.passwords.login}</span>
                           {password.data?.login && (
                             <button
                               className="overlay-copy-btn"
                               onClick={() => handleCopy(password.data.login)}
-                              title="Копировать логин"
+                              title={t.passwords.copyLogin}
                             >
                               <Copy size={12} />
                             </button>
@@ -143,7 +145,7 @@ export function OverlayWindow() {
                         </div>
                       </div>
                       <div className="overlay-detail-row">
-                        <span className="overlay-detail-label">Пароль:</span>
+                        <span className="overlay-detail-label">{t.passwords.password}:</span>
                         <div className="overlay-detail-value">
                           <span className="overlay-password">
                             {isPasswordVisible ? (password.data?.password || '') : '••••••••'}
@@ -152,14 +154,14 @@ export function OverlayWindow() {
                             <button
                               className="overlay-copy-btn"
                               onClick={() => handleCopy(password.data?.password || '')}
-                              title="Копировать пароль"
+                              title={t.passwords.copyPassword}
                             >
                               <Copy size={12} />
                             </button>
                             <button
                               className="overlay-copy-btn"
                               onClick={() => togglePasswordVisibility(password.id)}
-                              title={isPasswordVisible ? 'Скрыть пароль' : 'Показать пароль'}
+                              title={isPasswordVisible ? t.passwords.hidePassword : t.passwords.showPassword}
                             >
                               {isPasswordVisible ? <EyeOff size={12} /> : <Eye size={12} />}
                             </button>
@@ -168,13 +170,13 @@ export function OverlayWindow() {
                       </div>
                       {password.data?.url && (
                         <div className="overlay-detail-row">
-                          <span className="overlay-detail-label"><Globe size={14} /> URL:</span>
+                          <span className="overlay-detail-label"><Globe size={14} /> {t.passwords.url}:</span>
                           <div className="overlay-detail-value">
                             <span className="overlay-url">{password.data.url}</span>
                             <button
                               className="overlay-copy-btn"
                               onClick={() => handleCopy(password.data.url)}
-                              title="Копировать URL"
+                              title={t.passwords.copyUrl}
                             >
                               <Copy size={12} />
                             </button>
@@ -183,7 +185,7 @@ export function OverlayWindow() {
                       )}
                       {password.data?.notes && (
                         <div className="overlay-detail-row">
-                          <span className="overlay-detail-label">Заметки:</span>
+                          <span className="overlay-detail-label">{t.passwords.notes}:</span>
                           <div className="overlay-detail-value">
                             <span>{password.data.notes}</span>
                           </div>

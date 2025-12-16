@@ -1,5 +1,7 @@
 // Система локализации
 
+import { getTranslation, Translations } from './translations';
+
 export interface Language {
   code: string;
   name: string;
@@ -27,5 +29,20 @@ export function getDefaultLanguage(): Language {
   // Определяем язык по умолчанию на основе системных настроек
   const systemLang = navigator.language.split('-')[0];
   return getLanguageByCode(systemLang) || LANGUAGES[0];
+}
+
+// Глобальная переменная для текущего языка
+let currentLanguage: string = 'ru';
+
+export function setLanguage(lang: string) {
+  currentLanguage = lang;
+}
+
+export function getCurrentLanguage(): string {
+  return currentLanguage;
+}
+
+export function t(): Translations {
+  return getTranslation(currentLanguage);
 }
 

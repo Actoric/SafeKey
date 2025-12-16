@@ -1,4 +1,4 @@
-import { app, BrowserWindow, globalShortcut, ipcMain, screen, shell, Tray, Menu, nativeImage, desktopCapturer } from 'electron';
+import { app, BrowserWindow, globalShortcut, ipcMain, screen, shell, Tray, Menu, nativeImage } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -20,14 +20,16 @@ import { loadCloudSettings, saveCloudSettings } from './config/cloud-settings';
 import { loadAppSettings, saveAppSettings } from './config/app-settings';
 import { YandexDiskService } from './services/yandex-disk';
 import { YandexOAuthService } from './services/yandex-oauth';
+import { GoogleOAuthService } from './services/google-oauth';
 import { WindowsPinAuthService } from './auth/windows-pin-auth';
-import { initializeUpdater, checkForUpdates } from './updater/github-updater';
+import { initializeUpdater, checkForUpdates, downloadUpdate, installUpdate, updateWindowReferences } from './updater/github-updater';
 import { clipboard } from 'electron';
 import AutoLaunch from 'auto-launch';
 
 let mainWindow: BrowserWindow | null = null;
 let overlayWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
+let appIcon: Electron.NativeImage | null = null; // Сохраняем иконку приложения
 let currentOverlayShortcut: string = APP_CONFIG.shortcuts.overlay;
 let autoLauncher: AutoLaunch | null = null;
 
@@ -63,6 +65,7 @@ function createMainWindow() {
     maxHeight: APP_CONFIG.window.main.maxHeight,
     resizable: false, // Запрещаем изменение размера
     maximizable: false, // Запрещаем развертывание на весь экран
+    fullscreenable: false, // Отключаем полноэкранный режим (F11)
     frame: false,
     titleBarStyle: 'hidden',
     title: 'SafeKey',
@@ -72,11 +75,31 @@ function createMainWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: false,
-      devTools: process.env.NODE_ENV === 'development', // DevTools только в режиме разработки
+      devTools: process.env.NODE_ENV === 'development', // Только в режиме разработки
     },
     show: false,
     backgroundColor: '#ffffff',
   });
+
+  // Устанавливаем иконку для панели задач (Windows) и сохраняем её для трея
+  if (iconPath && process.platform === 'win32') {
+    try {
+      if (fs.existsSync(iconPath)) {
+        const icon = nativeImage.createFromPath(iconPath);
+        if (!icon.isEmpty()) {
+          mainWindow.setIcon(icon);
+          appIcon = icon; // Сохраняем иконку для использования в трее
+          console.log('[Main] Иконка установлена для главного окна:', iconPath);
+        } else {
+          console.warn('[Main] Иконка пустая:', iconPath);
+        }
+      } else {
+        console.warn('[Main] Файл иконки не найден:', iconPath);
+      }
+    } catch (error) {
+      console.error('[Main] Ошибка установки иконки:', error);
+    }
+  }
 
   if (process.env.NODE_ENV === 'development') {
     mainWindow.loadURL('http://localhost:5173');
@@ -84,12 +107,56 @@ function createMainWindow() {
   } else {
     mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
     // DevTools отключены в production для обычных пользователей
-    // Для отладки можно открыть через Ctrl+Shift+I (если включено в настройках)
   }
 
   mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription) => {
     console.error('[Main] Ошибка загрузки:', errorCode, errorDescription);
   });
+  
+  // Отключаем F11 (fullscreen) - перехватываем событие
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    if (input.key === 'F11') {
+      event.preventDefault();
+      // Ничего не делаем - просто блокируем F11
+    }
+  });
+
+  // Горячая клавиша для открытия DevTools (F12) через globalShortcut - только в режиме разработки
+  if (process.env.NODE_ENV === 'development') {
+    app.whenReady().then(() => {
+      try {
+        const registeredF12 = globalShortcut.register('F12', () => {
+          console.log('[Main] F12 нажата');
+          if (mainWindow) {
+            if (mainWindow.webContents.isDevToolsOpened()) {
+              mainWindow.webContents.closeDevTools();
+              console.log('[Main] DevTools закрыты через F12');
+            } else {
+              mainWindow.webContents.openDevTools();
+              console.log('[Main] DevTools открыты через F12');
+            }
+          }
+        });
+        console.log('[Main] F12 зарегистрирована:', registeredF12);
+        
+        const registeredCtrlI = globalShortcut.register('CommandOrControl+Shift+I', () => {
+          console.log('[Main] Ctrl+Shift+I нажата');
+          if (mainWindow) {
+            if (mainWindow.webContents.isDevToolsOpened()) {
+              mainWindow.webContents.closeDevTools();
+              console.log('[Main] DevTools закрыты через Ctrl+Shift+I');
+            } else {
+              mainWindow.webContents.openDevTools();
+              console.log('[Main] DevTools открыты через Ctrl+Shift+I');
+            }
+          }
+        });
+        console.log('[Main] Ctrl+Shift+I зарегистрирована:', registeredCtrlI);
+      } catch (error) {
+        console.error('[Main] Ошибка регистрации горячих клавиш:', error);
+      }
+    });
+  }
 
   mainWindow.on('closed', () => {
     mainWindow = null;
@@ -97,6 +164,22 @@ function createMainWindow() {
 
   mainWindow.once('ready-to-show', () => {
     if (mainWindow) {
+      // Убеждаемся, что иконка установлена для панели задач
+      if (iconPath && process.platform === 'win32') {
+        try {
+          if (fs.existsSync(iconPath)) {
+            const icon = nativeImage.createFromPath(iconPath);
+            if (!icon.isEmpty()) {
+              mainWindow.setIcon(icon);
+              appIcon = icon; // Сохраняем иконку для трея
+              console.log('[Main] Иконка установлена в ready-to-show:', iconPath);
+            }
+          }
+        } catch (error) {
+          console.error('[Main] Ошибка установки иконки в ready-to-show:', error);
+        }
+      }
+      
       const appSettings = loadAppSettings();
       if (appSettings.startMinimized) {
         // Не показываем окно, только создаем трей
@@ -104,8 +187,9 @@ function createMainWindow() {
       } else {
         mainWindow.show();
       }
+      // DevTools отключены в production
       // Инициализируем автообновление после показа окна (включаем и в режиме разработки)
-      initializeUpdater(mainWindow);
+      initializeUpdater(mainWindow, overlayWindow, tray);
     }
   });
 
@@ -140,6 +224,19 @@ function createMainWindow() {
 function createTray() {
   if (tray) return;
 
+  // Сначала пробуем использовать сохраненную иконку приложения
+  if (appIcon && !appIcon.isEmpty()) {
+    try {
+      const trayIcon = appIcon.resize({ width: 32, height: 32 });
+      tray = new Tray(trayIcon);
+      console.log('[Main] ✅ Трей создан с сохраненной иконкой приложения');
+      setupTrayMenu();
+      return;
+    } catch (error) {
+      console.warn('[Main] Ошибка использования сохраненной иконки:', error);
+    }
+  }
+
   // Путь к иконке для трея
   let iconPath: string;
   if (process.env.NODE_ENV === 'development') {
@@ -149,13 +246,91 @@ function createTray() {
       path.join(process.resourcesPath, 'build/icon.ico'),
       path.join(process.resourcesPath, 'app/build/icon.ico'),
       path.join(__dirname, '../build/icon.ico'),
+      path.join(__dirname, '../../build/icon.ico'),
     ];
     iconPath = possiblePaths.find(p => fs.existsSync(p)) || possiblePaths[0];
   }
 
-  const icon = nativeImage.createFromPath(iconPath);
-  icon.setTemplateImage(false);
-  tray = new Tray(icon.resize({ width: 16, height: 16 }));
+  // Загружаем иконку для трея
+  try {
+    console.log('[Main] Попытка загрузки иконки трея из:', iconPath);
+    console.log('[Main] Файл существует:', fs.existsSync(iconPath));
+    
+    if (fs.existsSync(iconPath)) {
+      const icon = nativeImage.createFromPath(iconPath);
+      console.log('[Main] Иконка загружена, isEmpty:', icon.isEmpty(), 'размер:', icon.getSize());
+      
+      if (!icon.isEmpty()) {
+        // Для Windows трей лучше работает с размером 32x32 или оригинальным размером
+        // Пробуем несколько вариантов
+        let trayIcon: Electron.NativeImage;
+        
+        const originalSize = icon.getSize();
+        console.log('[Main] Оригинальный размер иконки:', originalSize);
+        
+        if (process.platform === 'win32') {
+          // Для Windows используем размер 32x32 или оригинальный, если он меньше
+          const targetSize = Math.min(32, Math.max(originalSize.width, originalSize.height));
+          trayIcon = icon.resize({ width: targetSize, height: targetSize });
+          // НЕ используем setTemplateImage(false) - это может мешать отображению
+          console.log('[Main] Создан трей-иконка размером:', targetSize);
+        } else {
+          const traySize = 22;
+          trayIcon = icon.resize({ width: traySize, height: traySize });
+        }
+        
+        tray = new Tray(trayIcon);
+        console.log('[Main] ✅ Трей создан успешно с иконкой из:', iconPath);
+      } else {
+        console.error('[Main] ❌ Иконка пустая после загрузки');
+        // Пробуем использовать сохраненную иконку приложения
+        if (appIcon && !appIcon.isEmpty()) {
+          const trayIcon = appIcon.resize({ width: 32, height: 32 });
+          tray = new Tray(trayIcon);
+          console.log('[Main] ✅ Использована сохраненная иконка приложения для трея');
+        } else {
+          tray = new Tray(nativeImage.createEmpty());
+        }
+      }
+    } else {
+      console.error('[Main] ❌ Файл иконки не найден:', iconPath);
+      // Пробуем альтернативные пути
+      const altPaths = [
+        path.join(__dirname, '../../build/icon.ico'),
+        path.join(__dirname, '../../../build/icon.ico'),
+        path.join(process.resourcesPath || '', 'build/icon.ico'),
+      ];
+      
+      let found = false;
+      for (const altPath of altPaths) {
+        if (fs.existsSync(altPath)) {
+          console.log('[Main] Найдена альтернативная иконка:', altPath);
+          const icon = nativeImage.createFromPath(altPath);
+          if (!icon.isEmpty()) {
+            const trayIcon = icon.resize({ width: 32, height: 32 });
+            tray = new Tray(trayIcon);
+            found = true;
+            console.log('[Main] ✅ Трей создан с альтернативной иконкой');
+          }
+          break;
+        }
+      }
+      
+      if (!found) {
+        tray = new Tray(nativeImage.createEmpty());
+        console.error('[Main] ❌ Не удалось найти иконку ни по одному пути');
+      }
+    }
+  } catch (error) {
+    console.error('[Main] ❌ Ошибка загрузки иконки для трея:', error);
+    tray = new Tray(nativeImage.createEmpty());
+  }
+
+  setupTrayMenu();
+}
+
+function setupTrayMenu() {
+  if (!tray) return;
 
   const contextMenu = Menu.buildFromTemplate([
     {
@@ -179,6 +354,21 @@ function createTray() {
     {
       label: 'Выход',
       click: () => {
+        // Закрываем все окна перед выходом
+        if (mainWindow) {
+          mainWindow.destroy();
+          mainWindow = null;
+        }
+        if (overlayWindow) {
+          overlayWindow.destroy();
+          overlayWindow = null;
+        }
+        // Уничтожаем трей
+        if (tray) {
+          tray.destroy();
+          tray = null;
+        }
+        // Выходим из приложения
         app.quit();
       },
     },
@@ -199,6 +389,9 @@ function createTray() {
       createMainWindow();
     }
   });
+
+  // Обновляем ссылку на tray в updater
+  updateWindowReferences(mainWindow, overlayWindow, tray);
 }
 
 function setupAutoLaunch() {
@@ -252,7 +445,7 @@ function createOverlayWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: false,
-      devTools: process.env.NODE_ENV === 'development', // DevTools только в режиме разработки
+      devTools: process.env.NODE_ENV === 'development', // Только в режиме разработки
     },
   });
 
@@ -266,6 +459,8 @@ function createOverlayWindow() {
 
   overlayWindow.on('closed', () => {
     overlayWindow = null;
+    // Обновляем ссылку на overlayWindow в updater
+    updateWindowReferences(mainWindow, overlayWindow, tray);
   });
 
   overlayWindow.on('blur', () => {
@@ -273,6 +468,9 @@ function createOverlayWindow() {
       overlayWindow.close();
     }
   });
+
+  // Обновляем ссылку на overlayWindow в updater
+  updateWindowReferences(mainWindow, overlayWindow, tray);
 }
 
 function registerOverlayShortcut() {
@@ -823,6 +1021,31 @@ ipcMain.handle('authorize-yandex-disk', async () => {
   }
 });
 
+ipcMain.handle('authorize-google-drive', async () => {
+  try {
+    console.log('[Main] Запуск авторизации Google Drive...');
+    const token = await GoogleOAuthService.authorize();
+    if (token) {
+      console.log('[Main] Токен Google Drive получен успешно');
+      // Сохраняем токен в настройках
+      const cloudSettings = loadCloudSettings();
+      cloudSettings.googleDrive = {
+        ...cloudSettings.googleDrive,
+        enabled: true,
+        token: token,
+      };
+      saveCloudSettings(cloudSettings);
+      return { success: true, token };
+    } else {
+      console.log('[Main] Авторизация Google Drive отменена или не удалась');
+      return { success: false, token: null };
+    }
+  } catch (error) {
+    console.error('[Main] Ошибка авторизации Google Drive:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Неизвестная ошибка' };
+  }
+});
+
 ipcMain.handle('sync-to-cloud', async () => {
   try {
     if (!dbService) {
@@ -1014,16 +1237,33 @@ ipcMain.handle('window-close', () => {
 
 // Автообновление
 ipcMain.handle('check-for-updates', async () => {
-  if (process.env.NODE_ENV !== 'development') {
-    try {
-      checkForUpdates();
-      return { success: true };
-    } catch (error) {
-      console.error('[Main] Ошибка проверки обновлений:', error);
-      return { success: false, message: 'Ошибка проверки обновлений' };
-    }
+  try {
+    checkForUpdates();
+    return { success: true };
+  } catch (error) {
+    console.error('[Main] Ошибка проверки обновлений:', error);
+    return { success: false, error: (error as Error).message };
   }
-  return { success: false, message: 'Обновления отключены в режиме разработки' };
+});
+
+ipcMain.handle('download-update', async () => {
+  try {
+    downloadUpdate();
+    return { success: true };
+  } catch (error) {
+    console.error('[Main] Ошибка загрузки обновления:', error);
+    return { success: false, error: (error as Error).message };
+  }
+});
+
+ipcMain.handle('install-update', async () => {
+  try {
+    installUpdate();
+    return { success: true };
+  } catch (error) {
+    console.error('[Main] Ошибка установки обновления:', error);
+    return { success: false, error: (error as Error).message };
+  }
 });
 
 // App Settings
@@ -1063,6 +1303,8 @@ ipcMain.handle('save-app-settings', async (_, settings: any) => {
     } else if (!settings.minimizeToTray && tray) {
       tray.destroy();
       tray = null;
+      // Обновляем ссылку на tray в updater
+      updateWindowReferences(mainWindow, overlayWindow, tray);
     }
     
     return { success: true };

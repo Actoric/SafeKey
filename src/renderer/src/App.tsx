@@ -12,7 +12,7 @@ function App() {
   const location = useLocation();
   const { isAuthenticated, isInitialized, checkAuth } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [updateStatus, setUpdateStatus] = useState<'checking' | 'downloading' | 'downloaded' | 'error' | 'ready' | 'completed' | null>(null);
+  const [updateStatus, setUpdateStatus] = useState<'checking' | 'available' | 'downloading' | 'downloaded' | 'error' | 'ready' | 'completed' | null>(null);
   const [updateVersion, setUpdateVersion] = useState<string>('');
   const [updateProgress, setUpdateProgress] = useState(0);
   const [updateError, setUpdateError] = useState<string>('');
@@ -76,21 +76,38 @@ function App() {
       }, 30000);
     };
 
-    const handleUpdateAvailable = (_event: any, info: any) => {
-      console.log('[App] Обновление доступно:', info?.version);
+    const handleUpdateAvailable = (info: any) => {
+      console.log('[App] Обновление доступно (raw):', info);
+      console.log('[App] Тип info:', typeof info);
+      console.log('[App] Info JSON:', JSON.stringify(info, null, 2));
+      
+      // Проверяем, что данные действительно пришли
+      if (!info) {
+        console.warn('[App] ⚠️ Событие update-available получено, но данные отсутствуют (info is null/undefined)');
+        return;
+      }
+      
+      // Извлекаем версию из разных возможных форматов
+      let version = '';
+      if (typeof info === 'string') {
+        version = info;
+      } else if (info && typeof info === 'object') {
+        version = info.version || info.releaseVersion || info.tag || '';
+      }
+      
+      console.log('[App] Извлеченная версия:', version);
+      
       if (checkingTimeout) {
         clearTimeout(checkingTimeout);
         checkingTimeout = null;
       }
-      setUpdateVersion(info?.version || '');
-      setUpdateStatus('downloading');
-      setToast({ 
-        message: `Доступно обновление до версии ${info?.version || 'новой'}. Начинается загрузка...`, 
-        type: 'success' 
-      });
+      
+      // Устанавливаем статус 'available' - показываем окно с кнопкой "Обновить"
+      setUpdateVersion(version || 'новой версии');
+      setUpdateStatus('available'); // Показываем окно с кнопкой "Обновить"
     };
 
-    const handleUpdateProgress = (_event: any, progressObj: any) => {
+    const handleUpdateProgress = (progressObj: any) => {
       const percent = progressObj?.percent || 0;
       setUpdateProgress(percent);
       console.log('[App] Прогресс обновления:', percent + '%');
@@ -100,19 +117,68 @@ function App() {
       console.log('[App] Обновление загружено');
       setUpdateStatus('ready');
       setToast({ 
-        message: 'Обновление загружено! Приложение будет перезапущено через несколько секунд.', 
+        message: 'Обновление загружено! Приложение будет перезапущено через 3 секунды...', 
         type: 'success' 
       });
+      // Статус 'ready' означает, что обновление готово к установке
+      // Установка произойдет автоматически через 3 секунды в main процессе
     };
 
-    const handleUpdateError = (_event: any, error: any) => {
-      console.error('[App] Ошибка обновления:', error);
+    const handleUpdateError = (error: any) => {
+      console.error('[App] Ошибка обновления (raw):', error);
+      console.error('[App] Тип ошибки:', typeof error);
+      console.error('[App] Ошибка JSON:', JSON.stringify(error, null, 2));
+      
       if (checkingTimeout) {
         clearTimeout(checkingTimeout);
         checkingTimeout = null;
       }
       
-      const errorMessage = error?.message || error?.toString() || 'Неизвестная ошибка';
+      // Обрабатываем разные форматы ошибки
+      let errorMessage = 'Неизвестная ошибка';
+      if (error === null || error === undefined) {
+        // Если ошибка undefined, возможно это ошибка app-update.yml, которая уже обработана
+        // Проверяем контекст - если это происходит после начала загрузки, игнорируем
+        console.log('[App] Ошибка undefined - возможно это app-update.yml, игнорируем');
+        setUpdateStatus(null);
+        setUpdateError('');
+        return;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      } else if (typeof error === 'object') {
+        // Пытаемся извлечь сообщение из разных полей
+        errorMessage = error.message || 
+                      error.error || 
+                      error.err || 
+                      error.toString() || 
+                      JSON.stringify(error) || 
+                      'Неизвестная ошибка';
+      } else {
+        errorMessage = String(error);
+      }
+      
+      console.log('[App] Обработанное сообщение об ошибке:', errorMessage);
+      
+      // Игнорируем ошибку app-update.yml (это нормально, если обновление еще не загружено)
+      // Проверяем в разных форматах и регистрах
+      const errorMessageLower = errorMessage.toLowerCase();
+      const isAppUpdateYmlError = 
+        errorMessage.includes('app-update.yml') ||
+        errorMessage.includes('app-update') ||
+        errorMessageLower.includes('app-update.yml') ||
+        errorMessageLower.includes('app-update') ||
+        (errorMessage.includes('ENOENT') && (errorMessage.includes('app-update') || errorMessage.includes('update') || errorMessageLower.includes('app-update'))) ||
+        (errorMessageLower.includes('enoent') && (errorMessageLower.includes('app-update') || errorMessageLower.includes('update')));
+      
+      // Специальная обработка ошибки отсутствия latest.yml
+      const isLatestYmlError = 
+        (errorMessage.includes('latest.yml') || errorMessage.includes('Cannot find latest.yml')) &&
+        !errorMessage.includes('Download not started'); // "Download not started" не означает, что latest.yml не найден
+      
+      // Ошибка "Download not started" - это означает, что загрузка не началась, но latest.yml может быть найден
+      const isDownloadNotStartedError = 
+        errorMessage.includes('Download not started') ||
+        errorMessage.includes('no download-progress event');
       
       // Проверяем, не является ли это просто отсутствием обновлений
       const isNoUpdateError = 
@@ -120,8 +186,62 @@ function App() {
         errorMessage.includes('not available') ||
         errorMessage.includes('already the latest version') ||
         errorMessage.includes('latest version') ||
-        errorMessage.includes('404') ||
-        errorMessage.includes('Not Found');
+        (errorMessage.includes('404') && !errorMessage.includes('latest.yml')) ||
+        (errorMessage.includes('Not Found') && !errorMessage.includes('latest.yml'));
+      
+      // Игнорируем ошибку "App not packaged" - это нормально для dev/unpacked
+      const isAppNotPackagedError = 
+        errorMessage.includes('App not packaged') ||
+        errorMessage.includes('not packaged') ||
+        errorMessage.includes('dev/unpacked');
+      
+      if (isAppNotPackagedError) {
+        // Приложение не установлено - обновления недоступны, это нормально
+        console.log('[App] Обновления недоступны в dev/unpacked режиме (это нормально)');
+        setUpdateStatus(null);
+        setUpdateError('');
+        // НЕ показываем toast, чтобы не беспокоить пользователя
+        return;
+      }
+      
+      if (isAppUpdateYmlError) {
+        // Ошибка app-update.yml - это нормально, файл создается после загрузки
+        console.log('[App] Игнорируем ошибку app-update.yml (это нормально, файл создается после загрузки)');
+        console.log('[App] Ожидаем событие download-progress...');
+        // НЕ закрываем окно обновления, НЕ устанавливаем статус error
+        // Продолжаем показывать статус "downloading" и ожидаем download-progress
+        // Если статус еще не установлен, устанавливаем "downloading"
+        if (updateStatus === null || updateStatus === 'checking') {
+          setUpdateStatus('downloading');
+        }
+        setUpdateError('');
+        return;
+      }
+      
+      if (isDownloadNotStartedError) {
+        // Ошибка "Download not started" - загрузка не началась, но latest.yml может быть найден
+        console.log('[App] Ошибка: загрузка не началась');
+        console.log('[App] Это может быть из-за проблем с доступом к файлу или форматом latest.yml');
+        setUpdateError('Загрузка обновления не началась. Проверьте подключение к интернету и попробуйте позже.');
+        setUpdateStatus('error');
+        setToast({ 
+          message: 'Не удалось начать загрузку обновления. Проверьте подключение к интернету.', 
+          type: 'error' 
+        });
+        return;
+      }
+      
+      if (isLatestYmlError) {
+        // Ошибка отсутствия latest.yml - это означает, что файл не загружен на GitHub
+        console.log('[App] Ошибка: latest.yml не найден на GitHub');
+        setUpdateError('Файл latest.yml не найден в релизе GitHub. Пожалуйста, загрузите его вручную.');
+        setUpdateStatus('error');
+        setToast({ 
+          message: 'Ошибка обновления: файл latest.yml не найден в релизе GitHub. Обратитесь к разработчикам.', 
+          type: 'error' 
+        });
+        return;
+      }
       
       if (isNoUpdateError) {
         // Это не ошибка, просто нет обновлений
@@ -231,29 +351,15 @@ function App() {
 
   console.log('[App] Рендерим MainLayout. isInitialized:', isInitialized, 'isAuthenticated:', isAuthenticated);
 
-  // Если идет обновление, показываем только UI обновления
-  if (updateStatus) {
-    return (
-      <>
-        <TitleBar />
-        <UpdateProgress
-          version={updateVersion}
-          progress={updateProgress}
-          status={updateStatus}
-          error={updateError}
-          resultMessage={updateResultMessage}
-        />
-        {toast && (
-          <Toast
-            message={toast.message}
-            type={toast.type}
-            onClose={() => setToast(null)}
-            duration={toast.type === 'error' ? 8000 : 5000}
-          />
-        )}
-      </>
-    );
-  }
+  // UpdateProgress показывается как overlay, не блокируя основной UI
+  // Показываем если обновление доступно, идет загрузка или установка
+  const showUpdateProgress = updateStatus && (
+    updateStatus === 'available' ||
+    updateStatus === 'downloading' || 
+    updateStatus === 'downloaded' || 
+    updateStatus === 'ready' ||
+    updateStatus === 'error'
+  );
 
   // Основное приложение
   return (
@@ -262,6 +368,24 @@ function App() {
       <Routes>
         <Route path="*" element={<MainLayout />} />
       </Routes>
+      {showUpdateProgress && (
+        <UpdateProgress
+          version={updateVersion}
+          progress={updateProgress}
+          status={updateStatus}
+          error={updateError}
+          resultMessage={updateResultMessage}
+          onDownload={async () => {
+            console.log('[App] Пользователь нажал "Обновить"');
+            setUpdateStatus('downloading');
+            try {
+              await window.electronAPI.downloadUpdate();
+            } catch (error) {
+              console.error('[App] Ошибка при вызове downloadUpdate:', error);
+            }
+          }}
+        />
+      )}
       {toast && (
         <Toast
           message={toast.message}

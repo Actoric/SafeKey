@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, Plus, Star, Settings, LogOut, ChevronDown, ChevronRight, Folder, FolderOpen, Key, HelpCircle } from 'lucide-react';
+import { Search, Plus, Star, Settings, LogOut, ChevronDown, ChevronRight, Folder, FolderOpen, Key, HelpCircle, X } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { Category } from '../../../shared/types';
 import './Sidebar.css';
@@ -16,6 +16,7 @@ interface SidebarProps {
   showFavorites?: boolean;
   showBackupCodes?: boolean;
   showSecurityQuestions?: boolean;
+  onCategoryCreated?: () => void; // Callback для обновления категорий после создания
 }
 
 export function Sidebar({ 
@@ -28,6 +29,7 @@ export function Sidebar({
   onSecurityQuestionsClick,
   selectedCategoryId,
   showFavorites = false,
+  onCategoryCreated,
   showBackupCodes = false,
   showSecurityQuestions = false
 }: SidebarProps) {
@@ -105,9 +107,127 @@ export function Sidebar({
       setParentCategoryId(null);
       setShowCreateCategory(false);
       await loadCategories();
+      // Уведомляем родительский компонент о создании категории
+      if (onCategoryCreated) {
+        onCategoryCreated();
+      }
     } catch (error) {
       console.error('Ошибка создания категории:', error);
       alert('Ошибка создания категории');
+    }
+  };
+
+  const handleDeleteCategory = async (categoryId: number, categoryName: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Предотвращаем выбор категории при клике на кнопку удаления
+    
+    // Проверяем, есть ли дочерние категории
+    const hasChildren = categories.some(c => c.parent_id === categoryId);
+    if (hasChildren) {
+      if (!confirm(`Раскладка "${categoryName}" содержит подкатегории. Удалить вместе с ними?`)) {
+        return;
+      }
+    } else {
+      if (!confirm(`Удалить раскладку "${categoryName}"?`)) {
+        return;
+      }
+    }
+
+    try {
+      await window.electronAPI.deleteCategory(categoryId);
+      await loadCategories();
+      // Если удаленная категория была выбрана, сбрасываем выбор
+      if (selectedCategoryId === categoryId && onCategorySelect) {
+        onCategorySelect(null);
+      }
+      // Уведомляем родительский компонент об удалении категории
+      if (onCategoryCreated) {
+        onCategoryCreated();
+      }
+      
+      // Агрессивная разблокировка полей ввода после удаления категории
+      const unlockInputs = () => {
+        const inputs = document.querySelectorAll('input, textarea, select');
+        inputs.forEach((input) => {
+          if (input instanceof HTMLElement) {
+            // Убираем все блокировки через стили
+            input.style.pointerEvents = 'auto';
+            input.style.opacity = '1';
+            input.style.cursor = 'text';
+            input.style.userSelect = 'auto';
+            
+            // Убираем атрибуты блокировки
+            input.removeAttribute('disabled');
+            input.removeAttribute('readonly');
+            input.removeAttribute('aria-disabled');
+            
+            // Убираем классы блокировки
+            input.classList.remove('disabled', 'readonly', 'blocked');
+            
+            // Восстанавливаем tabIndex
+            if (input instanceof HTMLInputElement || input instanceof HTMLTextAreaElement || input instanceof HTMLSelectElement) {
+              if (input.tabIndex === -1) {
+                input.tabIndex = 0;
+              }
+            }
+          }
+        });
+        
+        // Разблокируем контейнеры
+        const containers = document.querySelectorAll('.password-editor, .settings-field, form, .main-content');
+        containers.forEach((container) => {
+          if (container instanceof HTMLElement) {
+            container.style.pointerEvents = 'auto';
+          }
+        });
+        
+        // Принудительно фокусируемся на первом доступном поле
+        const firstInput = document.querySelector('input:not([type="hidden"]), textarea') as HTMLElement;
+        if (firstInput && firstInput.focus) {
+          setTimeout(() => {
+            try {
+              firstInput.focus();
+            } catch (e) {
+              // Игнорируем ошибки фокуса
+            }
+          }, 50);
+        }
+      };
+      
+      // Вызываем разблокировку несколько раз с задержками для надежности
+      unlockInputs();
+      setTimeout(unlockInputs, 50);
+      setTimeout(unlockInputs, 100);
+      setTimeout(unlockInputs, 200);
+      setTimeout(unlockInputs, 500);
+    } catch (error) {
+      console.error('Ошибка удаления категории:', error);
+      alert('Ошибка удаления категории');
+      
+      // Разблокируем поля ввода даже при ошибке
+      const unlockInputs = () => {
+        const inputs = document.querySelectorAll('input, textarea, select');
+        inputs.forEach((input) => {
+          if (input instanceof HTMLElement) {
+            input.style.pointerEvents = 'auto';
+            input.style.opacity = '1';
+            input.style.cursor = 'text';
+            input.removeAttribute('disabled');
+            input.removeAttribute('readonly');
+            input.removeAttribute('aria-disabled');
+            input.classList.remove('disabled', 'readonly', 'blocked');
+          }
+        });
+        const containers = document.querySelectorAll('.password-editor, .settings-field, form, .main-content');
+        containers.forEach((container) => {
+          if (container instanceof HTMLElement) {
+            container.style.pointerEvents = 'auto';
+          }
+        });
+      };
+      unlockInputs();
+      setTimeout(unlockInputs, 50);
+      setTimeout(unlockInputs, 100);
+      setTimeout(unlockInputs, 200);
     }
   };
 
@@ -144,6 +264,13 @@ export function Sidebar({
           )}
           {isExpanded ? <FolderOpen size={16} /> : <Folder size={16} />}
           <span className="category-name">{category.name}</span>
+          <button
+            className="category-delete-btn"
+            onClick={(e) => handleDeleteCategory(category.id, category.name, e)}
+            title="Удалить раскладку"
+          >
+            <X size={12} />
+          </button>
         </div>
         {hasChildren && isExpanded && (
           <div className="category-children">

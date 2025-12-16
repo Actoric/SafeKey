@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { PasswordList } from './PasswordList';
 import { PasswordEditor } from './PasswordEditor';
 import { Sidebar } from './Sidebar';
@@ -24,10 +24,54 @@ export function MainLayout() {
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: number | null; show: boolean }>({ id: null, show: false });
   const [sortType, setSortType] = useState<SortType>('none');
+  const passwordEditorRef = useRef<{ refreshCategories: () => void }>(null);
 
   useEffect(() => {
     loadPasswords();
   }, [selectedCategoryId, showFavorites]);
+
+  // Функция для разблокировки всех полей ввода
+  const ensureInputsAreEditable = () => {
+    const inputs = document.querySelectorAll('input, textarea, select');
+    inputs.forEach((input) => {
+      if (input instanceof HTMLElement) {
+        // Убираем любые блокировки через стили
+        input.style.pointerEvents = 'auto';
+        input.style.opacity = '1';
+        input.style.cursor = 'text';
+        
+        // Убираем атрибуты блокировки
+        input.removeAttribute('disabled');
+        input.removeAttribute('readonly');
+        input.removeAttribute('aria-disabled');
+        
+        // Убираем классы блокировки (если есть)
+        input.classList.remove('disabled', 'readonly', 'blocked');
+        
+        // Убеждаемся, что элемент не заблокирован через tabIndex
+        if (input instanceof HTMLInputElement || input instanceof HTMLTextAreaElement || input instanceof HTMLSelectElement) {
+          if (input.tabIndex === -1 && input.hasAttribute('disabled')) {
+            input.tabIndex = 0;
+          }
+        }
+      }
+    });
+    
+    // Также проверяем родительские элементы на блокировку
+    const containers = document.querySelectorAll('.password-editor, .settings-field, form');
+    containers.forEach((container) => {
+      if (container instanceof HTMLElement) {
+        container.style.pointerEvents = 'auto';
+      }
+    });
+  };
+
+  // Исправление проблемы с полями ввода после запуска
+  useEffect(() => {
+    // Выполняем проверку после небольшой задержки
+    const timeout = setTimeout(ensureInputsAreEditable, 500);
+    return () => clearTimeout(timeout);
+  }, [loading]);
 
   const sortPasswords = (entries: PasswordEntry[]): PasswordEntry[] => {
     if (sortType === 'none') return entries;
@@ -166,25 +210,31 @@ export function MainLayout() {
       
       const isEditing = selectedPassword?.id;
       
+      // Сначала сохраняем локально (быстро)
       if (isEditing) {
         await window.electronAPI.updatePasswordEntry(selectedPassword.id, saveData);
       } else {
         await window.electronAPI.createPasswordEntry(saveData);
       }
       
-      // Автосохранение на облачные диски
-      try {
-        const cloudSettings = await window.electronAPI.getCloudSettings();
-        if (cloudSettings.yandexDisk?.enabled || cloudSettings.googleDrive?.enabled) {
-          await window.electronAPI.syncToCloud();
-        }
-      } catch (error) {
-        console.error('Ошибка синхронизации с облаком:', error);
-        setToast({ message: 'Пароль сохранен, но ошибка синхронизации с облаком', type: 'error' });
-      }
-      
+      // Сразу обновляем список паролей и закрываем редактор
       await loadPasswords();
       setSelectedPassword(null); // Сбрасываем выбранный пароль
+      
+      // Синхронизация с облаком в фоне (не блокирует UI)
+      window.electronAPI.getCloudSettings().then(async (cloudSettings) => {
+        if (cloudSettings.yandexDisk?.enabled || cloudSettings.googleDrive?.enabled) {
+          try {
+            await window.electronAPI.syncToCloud();
+            console.log('Синхронизация с облаком завершена');
+          } catch (error) {
+            console.error('Ошибка синхронизации с облаком:', error);
+            // Не показываем ошибку пользователю, так как пароль уже сохранен локально
+          }
+        }
+      }).catch((error) => {
+        console.error('Ошибка получения настроек облака:', error);
+      });
     } catch (error) {
       console.error('Ошибка сохранения пароля:', error);
       const errorMessage = error instanceof Error ? error.message : 'Неизвестная ошибка';
@@ -256,7 +306,7 @@ export function MainLayout() {
 
   return (
     <div className="main-layout">
-      <Sidebar 
+        <Sidebar 
         onSearch={handleSearch} 
         onNewPassword={() => {
           setSelectedPassword(null);
@@ -271,6 +321,12 @@ export function MainLayout() {
         onSecurityQuestionsClick={handleSecurityQuestionsClick}
         onSettingsClick={() => setShowSettings(true)}
         selectedCategoryId={showFavorites || showBackupCodes || showSecurityQuestions ? undefined : selectedCategoryId}
+        onCategoryCreated={() => {
+          // Обновляем список категорий в PasswordEditor после создания категории
+          if (passwordEditorRef.current) {
+            passwordEditorRef.current.refreshCategories();
+          }
+        }}
         showFavorites={showFavorites}
         showBackupCodes={showBackupCodes}
         showSecurityQuestions={showSecurityQuestions}
@@ -295,6 +351,7 @@ export function MainLayout() {
             onSortChange={setSortType}
           />
           <PasswordEditor
+            ref={passwordEditorRef}
             password={selectedPassword}
             onSave={handleSavePassword}
             onCancel={() => setSelectedPassword(null)}
