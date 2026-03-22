@@ -180,6 +180,20 @@
   flex: 1;
 }
 
+.category-actions {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  margin-left: auto;
+  opacity: 0;
+  transition: all 0.2s;
+}
+
+.category-item:hover .category-actions {
+  opacity: 1;
+}
+
+.category-settings-btn,
 .category-delete-btn {
   background: transparent;
   border: none;
@@ -190,13 +204,12 @@
   align-items: center;
   justify-content: center;
   border-radius: 4px;
-  opacity: 0;
   transition: all 0.2s;
-  margin-left: auto;
 }
 
-.category-item:hover .category-delete-btn {
-  opacity: 1;
+.category-settings-btn:hover {
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--accent);
 }
 
 .category-delete-btn:hover {
@@ -204,13 +217,27 @@
   color: var(--danger);
 }
 
+.category-item.selected .category-actions {
+  opacity: 0.7;
+}
+
+.category-item.selected:hover .category-actions {
+  opacity: 1;
+}
+
+.category-item.selected .category-settings-btn,
 .category-item.selected .category-delete-btn {
   color: rgba(255, 255, 255, 0.7);
 }
 
+.category-item.selected:hover .category-settings-btn,
 .category-item.selected:hover .category-delete-btn {
-  opacity: 1;
   color: rgba(255, 255, 255, 0.9);
+}
+
+.category-item.selected .category-settings-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
 }
 
 .category-item.selected .category-delete-btn:hover {

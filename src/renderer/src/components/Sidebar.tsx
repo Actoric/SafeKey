@@ -122,17 +122,59 @@ export function Sidebar({
     
     // Проверяем, есть ли дочерние категории
     const hasChildren = categories.some(c => c.parent_id === categoryId);
-    if (hasChildren) {
-      if (!confirm(`Раскладка "${categoryName}" содержит подкатегории. Удалить вместе с ними?`)) {
-        return;
-      }
-    } else {
-      if (!confirm(`Удалить раскладку "${categoryName}"?`)) {
-        return;
-      }
+    
+    // Используем кастомный диалог
+    const confirmed = await window.electronAPI.showDeleteCategoryDialog(categoryName, hasChildren);
+    if (!confirmed) {
+      // Немедленно разблокируем поля ввода при отмене
+      const unlockInputs = () => {
+        const inputs = document.querySelectorAll('input, textarea, select');
+        inputs.forEach((input) => {
+          if (input instanceof HTMLElement) {
+            input.style.pointerEvents = 'auto';
+            input.style.opacity = '1';
+            input.style.cursor = 'text';
+            input.removeAttribute('disabled');
+            input.removeAttribute('readonly');
+            input.removeAttribute('aria-disabled');
+            input.classList.remove('disabled', 'readonly', 'blocked');
+          }
+        });
+        const containers = document.querySelectorAll('.password-editor, .settings-field, form, .main-content');
+        containers.forEach((container) => {
+          if (container instanceof HTMLElement) {
+            container.style.pointerEvents = 'auto';
+          }
+        });
+      };
+      unlockInputs();
+      return;
     }
 
     try {
+      // Немедленно разблокируем поля ввода перед удалением
+      const unlockInputs = () => {
+        const inputs = document.querySelectorAll('input, textarea, select');
+        inputs.forEach((input) => {
+          if (input instanceof HTMLElement) {
+            input.style.pointerEvents = 'auto';
+            input.style.opacity = '1';
+            input.style.cursor = 'text';
+            input.removeAttribute('disabled');
+            input.removeAttribute('readonly');
+            input.removeAttribute('aria-disabled');
+            input.classList.remove('disabled', 'readonly', 'blocked');
+          }
+        });
+        const containers = document.querySelectorAll('.password-editor, .settings-field, form, .main-content');
+        containers.forEach((container) => {
+          if (container instanceof HTMLElement) {
+            container.style.pointerEvents = 'auto';
+          }
+        });
+      };
+      unlockInputs();
+
       await window.electronAPI.deleteCategory(categoryId);
       await loadCategories();
       // Если удаленная категория была выбрана, сбрасываем выбор
@@ -144,61 +186,23 @@ export function Sidebar({
         onCategoryCreated();
       }
       
-      // Агрессивная разблокировка полей ввода после удаления категории
-      const unlockInputs = () => {
-        const inputs = document.querySelectorAll('input, textarea, select');
-        inputs.forEach((input) => {
-          if (input instanceof HTMLElement) {
-            // Убираем все блокировки через стили
-            input.style.pointerEvents = 'auto';
-            input.style.opacity = '1';
-            input.style.cursor = 'text';
-            input.style.userSelect = 'auto';
-            
-            // Убираем атрибуты блокировки
-            input.removeAttribute('disabled');
-            input.removeAttribute('readonly');
-            input.removeAttribute('aria-disabled');
-            
-            // Убираем классы блокировки
-            input.classList.remove('disabled', 'readonly', 'blocked');
-            
-            // Восстанавливаем tabIndex
-            if (input instanceof HTMLInputElement || input instanceof HTMLTextAreaElement || input instanceof HTMLSelectElement) {
-              if (input.tabIndex === -1) {
-                input.tabIndex = 0;
-              }
-            }
+      // Синхронизация с облаком в фоне (не блокирует UI)
+      window.electronAPI.getCloudSettings().then(async (cloudSettings) => {
+        if (cloudSettings.yandexDisk?.enabled || cloudSettings.googleDrive?.enabled) {
+          try {
+            await window.electronAPI.syncToCloud();
+            console.log('Синхронизация с облаком завершена после удаления раскладки');
+          } catch (error) {
+            console.error('Ошибка синхронизации с облаком:', error);
           }
-        });
-        
-        // Разблокируем контейнеры
-        const containers = document.querySelectorAll('.password-editor, .settings-field, form, .main-content');
-        containers.forEach((container) => {
-          if (container instanceof HTMLElement) {
-            container.style.pointerEvents = 'auto';
-          }
-        });
-        
-        // Принудительно фокусируемся на первом доступном поле
-        const firstInput = document.querySelector('input:not([type="hidden"]), textarea') as HTMLElement;
-        if (firstInput && firstInput.focus) {
-          setTimeout(() => {
-            try {
-              firstInput.focus();
-            } catch (e) {
-              // Игнорируем ошибки фокуса
-            }
-          }, 50);
         }
-      };
+      }).catch((error) => {
+        console.error('Ошибка получения настроек облака:', error);
+      });
       
-      // Вызываем разблокировку несколько раз с задержками для надежности
-      unlockInputs();
+      // Дополнительная разблокировка после удаления
       setTimeout(unlockInputs, 50);
       setTimeout(unlockInputs, 100);
-      setTimeout(unlockInputs, 200);
-      setTimeout(unlockInputs, 500);
     } catch (error) {
       console.error('Ошибка удаления категории:', error);
       alert('Ошибка удаления категории');
@@ -227,7 +231,6 @@ export function Sidebar({
       unlockInputs();
       setTimeout(unlockInputs, 50);
       setTimeout(unlockInputs, 100);
-      setTimeout(unlockInputs, 200);
     }
   };
 
@@ -264,13 +267,15 @@ export function Sidebar({
           )}
           {isExpanded ? <FolderOpen size={16} /> : <Folder size={16} />}
           <span className="category-name">{category.name}</span>
-          <button
-            className="category-delete-btn"
-            onClick={(e) => handleDeleteCategory(category.id, category.name, e)}
-            title="Удалить раскладку"
-          >
-            <X size={12} />
-          </button>
+          <div className="category-actions">
+            <button
+              className="category-delete-btn"
+              onClick={(e) => handleDeleteCategory(category.id, category.name, e)}
+              title="Удалить раскладку"
+            >
+              <X size={12} />
+            </button>
+          </div>
         </div>
         {hasChildren && isExpanded && (
           <div className="category-children">

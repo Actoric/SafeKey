@@ -1,0 +1,274 @@
+/* Адаптивная вёрстка под любые экраны: телефон, планшет, альбом, десктоп */
+
+/* Базовый размер шрифта подстраивается под ширину и высоту экрана */
+html {
+  font-size: clamp(14px, 2.5vw + 2vmin, 18px);
+}
+
+/* Безопасные отступы для вырезов и жестов */
+.mobile-page {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  width: 100%;
+  max-width: 100%;
+  padding: clamp(0.75rem, 4vw, 1.5rem);
+  padding-left: max(clamp(0.75rem, 4vw, 1.5rem), env(safe-area-inset-left));
+  padding-right: max(clamp(0.75rem, 4vw, 1.5rem), env(safe-area-inset-right));
+  padding-bottom: max(clamp(0.75rem, 4vw, 1.5rem), env(safe-area-inset-bottom));
+  padding-top: max(clamp(0.75rem, 4vw, 1.5rem), env(safe-area-inset-top));
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+/* Контейнер с ограничением ширины для больших экранов */
+.mobile-container {
+  width: 100%;
+  max-width: min(100%, 42rem);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.mobile-container-wide {
+  max-width: min(100%, 56rem);
+}
+
+/* Заголовки масштабируются */
+.mobile-title {
+  font-size: clamp(1.25rem, 4vw, 1.75rem);
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.mobile-subtitle {
+  font-size: clamp(0.875rem, 2vw, 1rem);
+  color: var(--text-secondary);
+  margin-bottom: clamp(1rem, 4vw, 1.5rem);
+}
+
+/* Кнопки и инпуты адаптивные */
+.mobile-btn {
+  width: 100%;
+  padding: clamp(0.75rem, 3vw, 1rem) clamp(1rem, 4vw, 1.5rem);
+  font-size: clamp(0.9375rem, 2vw, 1rem);
+  border-radius: clamp(0.375rem, 1.5vw, 0.5rem);
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.mobile-btn:active {
+  opacity: 0.9;
+}
+
+.mobile-btn-primary {
+  background: var(--accent);
+  color: #fff;
+}
+
+.mobile-btn-secondary {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+}
+
+.mobile-btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  border: none;
+  font-size: clamp(0.8125rem, 1.5vw, 0.875rem);
+}
+
+.mobile-input {
+  width: 100%;
+  padding: clamp(0.625rem, 2.5vw, 0.75rem) clamp(0.75rem, 3vw, 1rem);
+  font-size: inherit;
+  border: 1px solid var(--border);
+  border-radius: clamp(0.375rem, 1.5vw, 0.5rem);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  box-sizing: border-box;
+}
+
+.mobile-label {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-size: clamp(0.875rem, 2vw, 0.9375rem);
+}
+
+/* Шапка и подвал */
+.mobile-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: clamp(0.75rem, 3vw, 1rem);
+  padding-left: max(clamp(0.75rem, 3vw, 1rem), env(safe-area-inset-left));
+  padding-right: max(clamp(0.75rem, 3vw, 1rem), env(safe-area-inset-right));
+  padding-top: max(clamp(0.75rem, 3vw, 1rem), env(safe-area-inset-top));
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.mobile-header-title {
+  font-size: clamp(1.125rem, 3vw, 1.25rem);
+  font-weight: 600;
+}
+
+.mobile-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: clamp(0.5rem, 2vw, 0.75rem);
+  align-items: center;
+  padding: clamp(0.75rem, 3vw, 1rem);
+  padding-left: max(clamp(0.75rem, 3vw, 1rem), env(safe-area-inset-left));
+  padding-right: max(clamp(0.75rem, 3vw, 1rem), env(safe-area-inset-right));
+  padding-bottom: max(clamp(0.75rem, 3vw, 1rem), env(safe-area-inset-bottom));
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+/* Навигация (категории) — горизонтальный скролл на узких экранах */
+.mobile-nav {
+  display: flex;
+  gap: clamp(0.375rem, 1.5vw, 0.5rem);
+  padding: clamp(0.5rem, 2vw, 0.75rem);
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.mobile-nav-btn {
+  padding: clamp(0.375rem, 1.5vw, 0.5rem) clamp(0.75rem, 3vw, 1rem);
+  border-radius: 9999px;
+  white-space: nowrap;
+  font-size: clamp(0.8125rem, 2vw, 0.875rem);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.mobile-nav-btn.active {
+  border-width: 2px;
+  border-color: var(--accent);
+  background: var(--bg-secondary);
+}
+
+/* Контент с прокруткой */
+.mobile-content {
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
+  padding: clamp(0.75rem, 3vw, 1rem);
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Карточки паролей — сетка на широких экранах */
+.mobile-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.375rem, 2vw, 0.5rem);
+}
+
+@media (min-width: 480px) {
+  .mobile-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr));
+  }
+}
+
+.mobile-card {
+  padding: clamp(0.75rem, 3vw, 1rem);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: clamp(0.375rem, 1.5vw, 0.5rem);
+  break-inside: avoid;
+}
+
+.mobile-card-title {
+  font-weight: 600;
+  font-size: clamp(0.9375rem, 2vw, 1rem);
+  margin-bottom: 0.25rem;
+}
+
+.mobile-card-meta {
+  font-size: clamp(0.8125rem, 1.5vw, 0.875rem);
+  color: var(--text-secondary);
+  margin-bottom: clamp(0.375rem, 2vw, 0.5rem);
+}
+
+.mobile-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: clamp(0.375rem, 1.5vw, 0.5rem);
+}
+
+.mobile-card-btn {
+  padding: clamp(0.375rem, 1.5vw, 0.5rem) clamp(0.75rem, 3vw, 1rem);
+  font-size: clamp(0.75rem, 1.5vw, 0.8125rem);
+  border-radius: clamp(0.25rem, 1vw, 0.375rem);
+  border: none;
+  cursor: pointer;
+}
+
+.mobile-card-btn-primary {
+  background: var(--accent);
+  color: #fff;
+}
+
+.mobile-card-btn-outline {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+}
+
+/* Форма — отступы между элементами */
+.mobile-form {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1rem, 4vw, 1.5rem);
+}
+
+.mobile-form-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* Сообщения об ошибках */
+.mobile-error {
+  color: #ef4444;
+  font-size: clamp(0.8125rem, 1.5vw, 0.875rem);
+  margin-top: clamp(0.5rem, 2vw, 1rem);
+}
+
+/* Кнопка выхода в шапке */
+.mobile-icon-btn {
+  padding: clamp(0.375rem, 1.5vw, 0.5rem);
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobile-icon-btn:active {
+  opacity: 0.7;
+}
+
+/* Центрирование загрузки */
+.mobile-center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  text-align: center;
+}

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">SafeKey</string>
+    <string name="title_activity_main">SafeKey</string>
+    <string name="package_name">com.safekey.app</string>
+    <string name="custom_url_scheme">com.safekey.app</string>
+</resources>

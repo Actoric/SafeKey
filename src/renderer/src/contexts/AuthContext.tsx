@@ -30,6 +30,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(async () => {
     try {
+      // Проверяем статус авторизации из main процесса
+      const authStatus = await window.electronAPI.checkAuthStatus();
+      if (authStatus) {
+        console.log('[AuthContext] Пользователь уже авторизован');
+        setIsAuthenticated(true);
+        return true;
+      }
+      
+      // Если не авторизован, проверяем настройки и используем соответствующий метод
+      const settings = await window.electronAPI.getAppSettings();
+      const authType = settings.authType || 'windows-pin';
+      
+      if (authType === 'none') {
+        setIsAuthenticated(true);
+        return true;
+      }
+      
+      if (authType === 'app-pin') {
+        // Для app-pin проверка уже выполнена в PinCodeLogin
+        const status = await window.electronAPI.checkAuthStatus();
+        setIsAuthenticated(status);
+        return status;
+      }
+      
+      // Windows PIN по умолчанию
       console.log('[AuthContext] login вызван, проверка PIN-кода Windows...');
       const result = await window.electronAPI.verifyWindowsPin();
       console.log('[AuthContext] Результат проверки PIN-кода:', result);
@@ -48,9 +73,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
     console.log('[AuthContext] Выход из системы');
     setIsAuthenticated(false);
+    // Сбрасываем статус авторизации в main процессе
+    try {
+      await window.electronAPI.resetAuthStatus();
+      console.log('[AuthContext] Статус авторизации сброшен в main процессе');
+    } catch (error) {
+      console.error('[AuthContext] Ошибка сброса статуса авторизации:', error);
+    }
   }, []);
 
   return (

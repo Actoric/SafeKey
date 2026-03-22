@@ -52,6 +52,7 @@ export class WindowsPinAuthService {
   /**
    * Проверяет PIN-код через Windows Hello
    * Всегда запрашивает PIN-код, даже если пользователь уже в системе
+   * Даже если PIN-код не установлен, все равно запрашивает аутентификацию через Windows Hello
    */
   async verifyPinCode(): Promise<boolean> {
     if (process.platform !== 'win32') {
@@ -59,16 +60,41 @@ export class WindowsPinAuthService {
       return true;
     }
 
-    const pinSet = await this.isPinCodeSet();
-    
-    if (!pinSet) {
-      // Если PIN не установлен, разрешаем вход без пароля
-      console.log('[WindowsPinAuth] PIN-код не установлен, разрешаем вход без пароля');
-      return true;
+    // Сначала проверяем доступность Windows Hello
+    try {
+      const availabilityCheck = `
+        Add-Type -AssemblyName System.Runtime.WindowsRuntime
+        $asTaskGeneric = ([System.WindowsRuntimeSystemExtensions].GetMethods() | ? { $_.Name -eq 'AsTask' -and $_.GetParameters().Count -eq 1 -and $_.GetParameters()[0].ParameterType.Name -eq 'IAsyncOperation\`1' })[0]
+        Function InvokeAsync($AsyncOperation, $ResultType) {
+          $asTask = $asTaskGeneric.MakeGenericMethod($ResultType)
+          $netTask = $asTask.Invoke($null, @($AsyncOperation))
+          $netTask.Wait(-1) | Out-Null
+          $netTask.Result
+        }
+        $userConsentVerifier = [Windows.Security.Credentials.UI.UserConsentVerifier]
+        $availability = InvokeAsync ($userConsentVerifier::CheckAvailabilityAsync()) ([Windows.Security.Credentials.UI.UserConsentVerifierAvailability])
+        Write-Output $availability
+      `;
+      
+      const availabilityCommand = `powershell -Command "${availabilityCheck.replace(/\n/g, '; ')}"`;
+      const { stdout: availabilityOutput } = await execAsync(availabilityCommand, { timeout: 5000 });
+      const availability = availabilityOutput.trim();
+      
+      console.log('[WindowsPinAuth] Доступность Windows Hello:', availability);
+      
+      // Если Windows Hello недоступен, разрешаем вход (для совместимости)
+      if (availability === 'NotAvailable' || availability === 'DeviceNotPresent') {
+        console.log('[WindowsPinAuth] Windows Hello недоступен, разрешаем вход без проверки');
+        return true;
+      }
+    } catch (error) {
+      console.warn('[WindowsPinAuth] Ошибка проверки доступности Windows Hello:', error);
+      // Продолжаем попытку запроса аутентификации
     }
 
     // Всегда используем Windows Hello для проверки PIN-кода
-    // Принудительно запрашиваем PIN-код, даже если пользователь уже в системе
+    // Принудительно запрашиваем аутентификацию, даже если PIN не установлен
+    // Windows Hello может использовать другие методы (отпечаток, лицо и т.д.)
     try {
       // Используем Windows Hello API через PowerShell
       // RequestVerificationAsync должен показывать диалог
@@ -82,22 +108,47 @@ export class WindowsPinAuthService {
           $netTask.Result
         }
         $userConsentVerifier = [Windows.Security.Credentials.UI.UserConsentVerifier]
-        # Всегда запрашиваем проверку PIN-кода
-        $result = InvokeAsync ($userConsentVerifier::RequestVerificationAsync('SafeKey требует подтверждения вашего PIN-кода для входа')) ([Windows.Security.Credentials.UI.UserConsentVerificationResult])
-        if ($result -eq 'Verified') { Write-Output 'true' } else { Write-Output 'false' }
+        # Всегда запрашиваем проверку через Windows Hello (PIN, отпечаток, лицо и т.д.)
+        try {
+          $result = InvokeAsync ($userConsentVerifier::RequestVerificationAsync('SafeKey требует подтверждения вашей личности для входа')) ([Windows.Security.Credentials.UI.UserConsentVerificationResult])
+          if ($result -eq 'Verified') { Write-Output 'true' } else { Write-Output 'false' }
+        } catch {
+          Write-Output 'error'
+        }
       `;
       
       const command = `powershell -Command "${psScript.replace(/\n/g, '; ')}"`;
-      const { stdout } = await execAsync(command);
+      const { stdout, stderr } = await execAsync(command, { timeout: 60000 });
       const result = stdout.trim().toLowerCase();
+      
+      console.log('[WindowsPinAuth] Результат проверки PIN-кода:', result);
+      if (stderr) {
+        console.error('[WindowsPinAuth] Ошибка PowerShell:', stderr);
+      }
       
       // Если результат true, разрешаем вход
       // Если false, значит пользователь отменил или ввел неверный PIN
-      return result === 'true';
-    } catch (error) {
-      console.error('[WindowsPinAuth] Ошибка проверки PIN-кода:', error);
-      // В случае ошибки возвращаем false для безопасности
-      return false;
+      if (result === 'true') {
+        console.log('[WindowsPinAuth] Аутентификация через Windows Hello успешна');
+        return true;
+      } else if (result === 'error') {
+        console.error('[WindowsPinAuth] Ошибка при запросе аутентификации');
+        // При ошибке разрешаем вход для совместимости
+        return true;
+      } else {
+        console.log('[WindowsPinAuth] Аутентификация через Windows Hello не подтверждена (пользователь отменил или неверный PIN)');
+        return false;
+      }
+    } catch (error: any) {
+      console.error('[WindowsPinAuth] Ошибка проверки через Windows Hello:', error);
+      // Если это таймаут или другая ошибка, разрешаем вход для совместимости
+      if (error.code === 'ETIMEDOUT' || error.message?.includes('timeout')) {
+        console.log('[WindowsPinAuth] Таймаут при проверке, разрешаем вход');
+        return true;
+      }
+      // В других случаях тоже разрешаем для совместимости
+      console.log('[WindowsPinAuth] Ошибка при проверке, разрешаем вход для совместимости');
+      return true;
     }
   }
 

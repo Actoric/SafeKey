@@ -3,13 +3,16 @@ import * as path from 'path';
 import { app } from 'electron';
 import { APP_CONFIG } from './app.config';
 
+export type AuthType = 'windows-pin' | 'app-pin' | 'none';
+export type Theme = 'light' | 'dark';
+
 export interface AppSettings {
   overlayShortcut?: string;
-  openInOverlay?: boolean;
   autoStart?: boolean;
-  startMinimized?: boolean;
-  minimizeToTray?: boolean;
   language?: string;
+  authType?: AuthType;
+  requireAuthOnStartup?: boolean;
+  theme?: Theme;
 }
 
 function getSettingsFilePath(): string {
@@ -18,11 +21,11 @@ function getSettingsFilePath(): string {
 
 const DEFAULT_SETTINGS: AppSettings = {
   overlayShortcut: APP_CONFIG.shortcuts.overlay,
-  openInOverlay: false,
   autoStart: false,
-  startMinimized: false,
-  minimizeToTray: false,
   language: 'ru',
+  authType: 'windows-pin',
+  requireAuthOnStartup: true,
+  theme: 'light',
 };
 
 export function loadAppSettings(): AppSettings {
@@ -33,11 +36,11 @@ export function loadAppSettings(): AppSettings {
       const settings = JSON.parse(data) as AppSettings;
       return {
         overlayShortcut: settings.overlayShortcut ?? DEFAULT_SETTINGS.overlayShortcut,
-        openInOverlay: settings.openInOverlay ?? DEFAULT_SETTINGS.openInOverlay,
         autoStart: settings.autoStart ?? DEFAULT_SETTINGS.autoStart,
-        startMinimized: settings.startMinimized ?? DEFAULT_SETTINGS.startMinimized,
-        minimizeToTray: settings.minimizeToTray ?? DEFAULT_SETTINGS.minimizeToTray,
         language: settings.language ?? DEFAULT_SETTINGS.language,
+        authType: settings.authType ?? DEFAULT_SETTINGS.authType,
+        requireAuthOnStartup: settings.requireAuthOnStartup ?? DEFAULT_SETTINGS.requireAuthOnStartup,
+        theme: settings.theme ?? DEFAULT_SETTINGS.theme,
       };
     }
   } catch (error) {

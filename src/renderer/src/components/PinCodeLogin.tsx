@@ -6,6 +6,8 @@ export function PinCodeLogin() {
   const [error, setError] = useState('');
   const [isChecking, setIsChecking] = useState(false);
   const [username, setUsername] = useState('');
+  const [authType, setAuthType] = useState<'windows-pin' | 'app-pin' | 'none'>('windows-pin');
+  const [appPin, setAppPin] = useState('');
   const { login } = useAuth();
 
   useEffect(() => {
@@ -24,23 +26,47 @@ export function PinCodeLogin() {
       }
     };
     loadUsername();
-  }, []);
 
-  // Убрали автоматический вход - теперь только по кнопке
+    // Загружаем настройки авторизации
+    const loadAuthSettings = async () => {
+      try {
+        const settings = await window.electronAPI.getAppSettings();
+        setAuthType(settings.authType || 'windows-pin');
+      } catch (error) {
+        console.error('Ошибка загрузки настроек авторизации:', error);
+      }
+    };
+    loadAuthSettings();
+  }, []);
 
   const handleLogin = async () => {
     setError('');
     setIsChecking(true);
 
     try {
-      console.log('[PinCodeLogin] Запуск проверки PIN-кода Windows...');
-      const result = await login();
-      console.log('[PinCodeLogin] Результат проверки PIN-кода:', result);
-      if (!result) {
-        console.log('[PinCodeLogin] PIN-код неверный или отменен');
-        setError('PIN-код неверный или вход отменен');
+      if (authType === 'app-pin') {
+        if (!appPin || appPin.length < 4) {
+          setError('PIN-код должен содержать минимум 4 символа');
+          setIsChecking(false);
+          return;
+        }
+        console.log('[PinCodeLogin] Запуск проверки PIN-кода приложения...');
+        const result = await window.electronAPI.verifyAppPin(appPin);
+        if (result) {
+          // Обновляем состояние через login
+          await login();
+        } else {
+          setError('Неверный PIN-код');
+        }
       } else {
-        console.log('[PinCodeLogin] Вход успешен');
+        console.log('[PinCodeLogin] Запуск проверки PIN-кода Windows...');
+        const result = await login();
+        if (!result) {
+          console.log('[PinCodeLogin] PIN-код неверный или отменен');
+          setError('PIN-код неверный или вход отменен');
+        } else {
+          console.log('[PinCodeLogin] Вход успешен');
+        }
       }
     } catch (err) {
       console.error('[PinCodeLogin] Ошибка при входе:', err);
@@ -60,13 +86,45 @@ export function PinCodeLogin() {
           </p>
         )}
         <p className="subtitle">
-          {isChecking ? 'Проверка PIN-кода Windows...' : 'Введите PIN-код Windows'}
+          {isChecking 
+            ? (authType === 'app-pin' ? 'Проверка PIN-кода...' : 'Проверка PIN-кода Windows...')
+            : (authType === 'app-pin' ? 'Введите PIN-код приложения' : 'Введите PIN-код Windows')}
         </p>
         <p className="description">
           {isChecking 
-            ? 'Ожидание подтверждения PIN-кода через Windows Hello...'
-            : 'Нажмите кнопку ниже, чтобы войти с помощью PIN-кода Windows. Если PIN-код не установлен, вход будет выполнен автоматически.'}
+            ? (authType === 'app-pin' ? 'Проверка PIN-кода...' : 'Ожидание подтверждения PIN-кода через Windows Hello...')
+            : (authType === 'app-pin' 
+                ? 'Введите PIN-код приложения для доступа к программе'
+                : 'Нажмите кнопку ниже, чтобы войти с помощью PIN-кода Windows. Если PIN-код не установлен, вход будет выполнен автоматически.')}
         </p>
+
+        {authType === 'app-pin' && !isChecking && (
+          <div style={{ marginBottom: '16px' }}>
+            <input
+              type="password"
+              value={appPin}
+              onChange={(e) => setAppPin(e.target.value)}
+              placeholder="PIN-код"
+              style={{
+                width: '100%',
+                padding: '12px',
+                border: '1px solid var(--border)',
+                borderRadius: '6px',
+                fontSize: '16px',
+                textAlign: 'center',
+                letterSpacing: '4px',
+                backgroundColor: 'var(--bg-primary)',
+                color: 'var(--text-primary)'
+              }}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  handleLogin();
+                }
+              }}
+              autoFocus
+            />
+          </div>
+        )}
 
         {error && <div className="error-message">{error}</div>}
 
@@ -75,8 +133,9 @@ export function PinCodeLogin() {
             type="button" 
             className="primary-button"
             onClick={handleLogin}
+            disabled={authType === 'app-pin' && (!appPin || appPin.length < 4)}
           >
-            Войти с PIN-кодом Windows
+            {authType === 'app-pin' ? 'Войти' : 'Войти с PIN-кодом Windows'}
           </button>
         )}
 

@@ -2,7 +2,7 @@
 
 export const APP_CONFIG = {
   name: 'SafeKey',
-  version: '1.0.0',
+  version: '1.2.2',
   database: {
     name: 'safekey.db',
   },

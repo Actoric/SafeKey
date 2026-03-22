@@ -112,7 +112,11 @@ export function SecurityQuestions({ onClose, sortType = 'none', onSortChange }: 
   };
 
   const handleDeleteEntry = async (id: number) => {
-    if (!confirm('Вы уверены, что хотите удалить эту запись?')) {
+    const entry = entries.find(e => e.id === id);
+    if (!entry) return;
+
+    const confirmed = await window.electronAPI.showDeleteSecurityQuestionDialog(entry.title);
+    if (!confirmed) {
       return;
     }
 
@@ -283,30 +287,39 @@ export function SecurityQuestions({ onClose, sortType = 'none', onSortChange }: 
 
           {showAddForm && (
             <div className="add-entry-form">
-              <input
-                type="text"
-                placeholder="Название (например: Google Account)"
-                value={newTitle}
-                onChange={(e) => setNewTitle(e.target.value)}
-                className="form-input"
-              />
+              <label className="form-label">
+                Название
+                <input
+                  type="text"
+                  placeholder="Например: Google Account"
+                  value={newTitle}
+                  onChange={(e) => setNewTitle(e.target.value)}
+                  className="form-input"
+                />
+              </label>
               <div className="questions-form-list">
                 {newQuestions.map((q, index) => (
                   <div key={index} className="question-form-item">
-                    <input
-                      type="text"
-                      placeholder="Контрольный вопрос"
-                      value={q.question}
-                      onChange={(e) => updateNewQuestion(index, 'question', e.target.value)}
-                      className="form-input"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Ответ на вопрос"
-                      value={q.answer}
-                      onChange={(e) => updateNewQuestion(index, 'answer', e.target.value)}
-                      className="form-input"
-                    />
+                    <label className="form-label">
+                      Вопрос
+                      <input
+                        type="text"
+                        placeholder="Контрольный вопрос"
+                        value={q.question}
+                        onChange={(e) => updateNewQuestion(index, 'question', e.target.value)}
+                        className="form-input"
+                      />
+                    </label>
+                    <label className="form-label">
+                      Ответ
+                      <input
+                        type="text"
+                        placeholder="Ответ на вопрос"
+                        value={q.answer}
+                        onChange={(e) => updateNewQuestion(index, 'answer', e.target.value)}
+                        className="form-input"
+                      />
+                    </label>
                     {newQuestions.length > 1 && (
                       <button
                         className="remove-question-button"
@@ -393,20 +406,26 @@ export function SecurityQuestions({ onClose, sortType = 'none', onSortChange }: 
                   <div key={index} className="question-item">
                     {isEditing ? (
                       <>
-                        <input
-                          type="text"
-                          value={question.question}
-                          onChange={(e) => updateEditingQuestion(index, 'question', e.target.value)}
-                          className="question-input"
-                          placeholder="Контрольный вопрос"
-                        />
-                        <input
-                          type="text"
-                          value={question.answer}
-                          onChange={(e) => updateEditingQuestion(index, 'answer', e.target.value)}
-                          className="answer-input"
-                          placeholder="Ответ на вопрос"
-                        />
+                        <label className="form-label">
+                          Вопрос
+                          <input
+                            type="text"
+                            value={question.question}
+                            onChange={(e) => updateEditingQuestion(index, 'question', e.target.value)}
+                            className="question-input"
+                            placeholder="Контрольный вопрос"
+                          />
+                        </label>
+                        <label className="form-label">
+                          Ответ
+                          <input
+                            type="text"
+                            value={question.answer}
+                            onChange={(e) => updateEditingQuestion(index, 'answer', e.target.value)}
+                            className="answer-input"
+                            placeholder="Ответ на вопрос"
+                          />
+                        </label>
                         {editingQuestions.length > 1 && (
                           <button
                             className="remove-question-button"

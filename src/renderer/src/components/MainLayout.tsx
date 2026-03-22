@@ -6,6 +6,8 @@ import { Settings } from './Settings';
 import { BackupCodes } from './BackupCodes';
 import { SecurityQuestions } from './SecurityQuestions';
 import { Toast, ToastType } from './Toast';
+import { CloudSyncProgress } from './CloudSyncProgress';
+import { Trash2, X } from 'lucide-react';
 import { PasswordEntry, PasswordEntryData } from '../../../shared/types';
 import './MainLayout.css';
 
@@ -22,8 +24,9 @@ export function MainLayout() {
   const [showSecurityQuestions, setShowSecurityQuestions] = useState(false);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState<{ id: number | null; show: boolean }>({ id: null, show: false });
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: number | null; ids: number[]; show: boolean }>({ id: null, ids: [], show: false });
   const [sortType, setSortType] = useState<SortType>('none');
+  const [cloudSyncProgress, setCloudSyncProgress] = useState<{ progress: number; visible: boolean }>({ progress: 0, visible: false });
   const passwordEditorRef = useRef<{ refreshCategories: () => void }>(null);
 
   useEffect(() => {
@@ -225,15 +228,39 @@ export function MainLayout() {
       window.electronAPI.getCloudSettings().then(async (cloudSettings) => {
         if (cloudSettings.yandexDisk?.enabled || cloudSettings.googleDrive?.enabled) {
           try {
+            // Показываем прогресс синхронизации
+            setCloudSyncProgress({ progress: 0, visible: true });
+            
+            // Симулируем прогресс во время синхронизации
+            const progressInterval = setInterval(() => {
+              setCloudSyncProgress(prev => {
+                if (prev.progress >= 90) {
+                  return prev; // Не превышаем 90% до завершения
+                }
+                return { ...prev, progress: prev.progress + 5 };
+              });
+            }, 200);
+
             await window.electronAPI.syncToCloud();
+            
+            clearInterval(progressInterval);
+            setCloudSyncProgress({ progress: 100, visible: true });
+            
+            // Скрываем прогресс через 1 секунду после завершения
+            setTimeout(() => {
+              setCloudSyncProgress({ progress: 0, visible: false });
+            }, 1000);
+            
             console.log('Синхронизация с облаком завершена');
           } catch (error) {
             console.error('Ошибка синхронизации с облаком:', error);
+            setCloudSyncProgress({ progress: 0, visible: false });
             // Не показываем ошибку пользователю, так как пароль уже сохранен локально
           }
         }
       }).catch((error) => {
         console.error('Ошибка получения настроек облака:', error);
+        setCloudSyncProgress({ progress: 0, visible: false });
       });
     } catch (error) {
       console.error('Ошибка сохранения пароля:', error);
@@ -244,21 +271,29 @@ export function MainLayout() {
 
   const handleDeletePassword = (id: number) => {
     // Показываем неблокирующий диалог подтверждения
-    setDeleteConfirm({ id, show: true });
+    setDeleteConfirm({ id, ids: [], show: true });
+  };
+
+  const handleDeleteMultiple = (ids: number[]) => {
+    // Показываем диалог подтверждения для множественного удаления
+    setDeleteConfirm({ id: null, ids, show: true });
   };
 
   const confirmDelete = async () => {
-    const id = deleteConfirm.id;
-    if (!id) return;
+    const idsToDelete = deleteConfirm.ids.length > 0 ? deleteConfirm.ids : (deleteConfirm.id ? [deleteConfirm.id] : []);
+    if (idsToDelete.length === 0) return;
     
-    setDeleteConfirm({ id: null, show: false });
+    setDeleteConfirm({ id: null, ids: [], show: false });
     
     try {
       // Сбрасываем выбранный пароль сразу, чтобы не блокировать UI
-      setSelectedPassword(null);
+      if (idsToDelete.length === 1 && selectedPassword?.id === idsToDelete[0]) {
+        setSelectedPassword(null);
+      }
       
       // Выполняем удаление асинхронно, не блокируя UI
-      window.electronAPI.deletePasswordEntry(id).then(async () => {
+      const deletePromises = idsToDelete.map(id => window.electronAPI.deletePasswordEntry(id));
+      Promise.all(deletePromises).then(async () => {
         await loadPasswords();
         
         // Автосохранение на облачные диски после удаления (в фоне)
@@ -266,6 +301,7 @@ export function MainLayout() {
           if (cloudSettings.yandexDisk?.enabled || cloudSettings.googleDrive?.enabled) {
             try {
               await window.electronAPI.syncToCloud();
+              console.log('Синхронизация с облаком завершена после удаления');
             } catch (error) {
               console.error('Ошибка синхронизации с облаком:', error);
             }
@@ -274,17 +310,17 @@ export function MainLayout() {
           console.error('Ошибка получения настроек облака:', error);
         });
       }).catch((error) => {
-        console.error('Ошибка удаления пароля:', error);
-        setToast({ message: 'Ошибка удаления пароля', type: 'error' });
+        console.error('Ошибка удаления паролей:', error);
+        setToast({ message: 'Ошибка удаления паролей', type: 'error' });
       });
     } catch (error) {
-      console.error('Ошибка удаления пароля:', error);
-      setToast({ message: 'Ошибка удаления пароля', type: 'error' });
+      console.error('Ошибка удаления паролей:', error);
+      setToast({ message: 'Ошибка удаления паролей', type: 'error' });
     }
   };
 
   const cancelDelete = () => {
-    setDeleteConfirm({ id: null, show: false });
+    setDeleteConfirm({ id: null, ids: [], show: false });
   };
 
   const handleToggleFavorite = async (id: number) => {
@@ -345,6 +381,7 @@ export function MainLayout() {
             passwords={passwords}
             onSelect={setSelectedPassword}
             onDelete={handleDeletePassword}
+            onDeleteMultiple={handleDeleteMultiple}
             onToggleFavorite={handleToggleFavorite}
             loading={loading}
             sortType={sortType}
@@ -356,6 +393,12 @@ export function MainLayout() {
             onSave={handleSavePassword}
             onCancel={() => setSelectedPassword(null)}
             selectedCategoryId={selectedCategoryId}
+            onCategoryCreated={() => {
+              // Обновляем категории в PasswordEditor после создания категории
+              if (passwordEditorRef.current) {
+                passwordEditorRef.current.refreshCategories();
+              }
+            }}
           />
         </div>
       )}
@@ -378,21 +421,39 @@ export function MainLayout() {
         />
       )}
       {deleteConfirm.show && (
-        <div className="confirm-overlay" onClick={cancelDelete}>
-          <div className="confirm-dialog" onClick={(e) => e.stopPropagation()}>
-            <h3>Подтверждение удаления</h3>
-            <p>Вы уверены, что хотите удалить этот пароль?</p>
-            <div className="confirm-actions">
-              <button className="secondary-button" onClick={cancelDelete}>
+        <div className="delete-password-dialog-overlay" onClick={cancelDelete}>
+          <div className="delete-password-dialog" onClick={(e) => e.stopPropagation()}>
+            <div className="delete-password-dialog-header">
+              <div className="delete-password-dialog-icon">
+                <Trash2 size={24} />
+              </div>
+              <h3>Подтверждение удаления</h3>
+              <button className="delete-password-dialog-close" onClick={cancelDelete}>
+                <X size={18} />
+              </button>
+            </div>
+            <div className="delete-password-dialog-content">
+              {deleteConfirm.ids.length > 0 ? (
+                <p>Вы уверены, что хотите удалить <strong>{deleteConfirm.ids.length}</strong> {deleteConfirm.ids.length === 1 ? 'пароль' : deleteConfirm.ids.length < 5 ? 'пароля' : 'паролей'}?</p>
+              ) : (
+                <p>Вы уверены, что хотите удалить этот пароль?</p>
+              )}
+            </div>
+            <div className="delete-password-dialog-actions">
+              <button className="delete-password-dialog-button secondary" onClick={cancelDelete}>
                 Отмена
               </button>
-              <button className="primary-button" onClick={confirmDelete}>
+              <button className="delete-password-dialog-button danger" onClick={confirmDelete}>
                 Удалить
               </button>
             </div>
           </div>
         </div>
       )}
+      <CloudSyncProgress 
+        progress={cloudSyncProgress.progress} 
+        visible={cloudSyncProgress.visible} 
+      />
     </div>
   );
 }

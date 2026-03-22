@@ -1,0 +1,69 @@
+{
+  "description": "Альтернативные конфигурации для electron-builder иконок. Скопируйте нужную секцию в package.json",
+  "configs": {
+    "config1": {
+      "name": "Текущая конфигурация (рекомендуется)",
+      "description": "Иконка указана в корневой секции и в секции win",
+      "build": {
+        "icon": "build/icon.ico",
+        "win": {
+          "icon": "build/icon.ico"
+        }
+      }
+    },
+    "config2": {
+      "name": "Только корневая иконка",
+      "description": "Иконка указана только в корневой секции, win использует её автоматически",
+      "build": {
+        "icon": "build/icon.ico",
+        "win": {
+          "icon": null
+        }
+      }
+    },
+    "config3": {
+      "name": "Относительно buildResources",
+      "description": "Если buildResources = 'build', можно указать путь относительно этой папки",
+      "build": {
+        "directories": {
+          "buildResources": "build"
+        },
+        "icon": "build/icon.ico",
+        "win": {
+          "icon": "icon.ico"
+        }
+      }
+    },
+    "config4": {
+      "name": "Абсолютный путь",
+      "description": "Использование абсолютного пути от корня проекта",
+      "build": {
+        "icon": "./build/icon.ico",
+        "win": {
+          "icon": "./build/icon.ico"
+        }
+      }
+    },
+    "config5": {
+      "name": "Иконка в корне проекта",
+      "description": "Переместите icon.ico в корень проекта и используйте эту конфигурацию",
+      "build": {
+        "directories": {
+          "buildResources": "."
+        },
+        "icon": "icon.ico",
+        "win": {
+          "icon": "icon.ico"
+        }
+      }
+    }
+  },
+  "instructions": {
+    "step1": "Выберите одну из конфигураций выше",
+    "step2": "Скопируйте соответствующие поля в ваш package.json",
+    "step3": "Запустите: npm run check-config",
+    "step4": "Если все пути найдены, выполните пересборку: npm run build:win",
+    "step5": "Проверьте результат в release/win-unpacked/SafeKey.exe"
+  }
+}
+

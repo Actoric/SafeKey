@@ -1,9 +1,268 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { CloudSettings, AppSettings } from '../../../shared/types';
 import { LANGUAGES, setLanguage } from '../utils/i18n';
 import { useTranslation } from '../hooks/useTranslation';
 import './Settings.css';
+
+function AppPinSettings() {
+  const [currentPin, setCurrentPin] = useState('');
+  const [newPin, setNewPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
+  const [isPinSet, setIsPinSet] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  useEffect(() => {
+    checkPinStatus();
+  }, []);
+
+  const checkPinStatus = async () => {
+    try {
+      const pinSet = await window.electronAPI.checkAppPinSet();
+      setIsPinSet(pinSet);
+    } catch (error) {
+      console.error('Ошибка проверки PIN-кода:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSetPin = async () => {
+    if (!newPin || newPin.length < 4) {
+      setError('PIN-код должен содержать минимум 4 символа');
+      return;
+    }
+
+    if (newPin !== confirmPin) {
+      setError('PIN-коды не совпадают');
+      return;
+    }
+
+    setSaving(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const result = await window.electronAPI.setAppPin(newPin);
+      if (result.success) {
+        setSuccess('PIN-код успешно установлен');
+        setNewPin('');
+        setConfirmPin('');
+        setIsPinSet(true);
+        setTimeout(() => setSuccess(''), 3000);
+      } else {
+        setError(result.error || 'Ошибка установки PIN-кода');
+      }
+    } catch (error) {
+      setError('Ошибка установки PIN-кода: ' + (error instanceof Error ? error.message : 'Неизвестная ошибка'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleChangePin = async () => {
+    if (!currentPin) {
+      setError('Введите текущий PIN-код');
+      return;
+    }
+
+    // Проверяем текущий PIN
+    const verified = await window.electronAPI.verifyAppPin(currentPin);
+    if (!verified) {
+      setError('Неверный текущий PIN-код');
+      return;
+    }
+
+    if (!newPin || newPin.length < 4) {
+      setError('PIN-код должен содержать минимум 4 символа');
+      return;
+    }
+
+    if (newPin !== confirmPin) {
+      setError('PIN-коды не совпадают');
+      return;
+    }
+
+    setSaving(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const result = await window.electronAPI.setAppPin(newPin);
+      if (result.success) {
+        setSuccess('PIN-код успешно изменен');
+        setCurrentPin('');
+        setNewPin('');
+        setConfirmPin('');
+        setTimeout(() => setSuccess(''), 3000);
+      } else {
+        setError(result.error || 'Ошибка изменения PIN-кода');
+      }
+    } catch (error) {
+      setError('Ошибка изменения PIN-кода: ' + (error instanceof Error ? error.message : 'Неизвестная ошибка'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleClearPin = async () => {
+    if (!currentPin) {
+      setError('Введите текущий PIN-код для подтверждения');
+      return;
+    }
+
+    // Проверяем текущий PIN
+    const verified = await window.electronAPI.verifyAppPin(currentPin);
+    if (!verified) {
+      setError('Неверный PIN-код');
+      return;
+    }
+
+    setSaving(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const result = await window.electronAPI.clearAppPin();
+      if (result.success) {
+        setSuccess('PIN-код успешно удален');
+        setCurrentPin('');
+        setIsPinSet(false);
+        setTimeout(() => setSuccess(''), 3000);
+      } else {
+        setError('Ошибка удаления PIN-кода');
+      }
+    } catch (error) {
+      setError('Ошибка удаления PIN-кода: ' + (error instanceof Error ? error.message : 'Неизвестная ошибка'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return <div style={{ padding: '12px', fontSize: '14px', color: 'var(--text-secondary)' }}>Загрузка...</div>;
+  }
+
+  return (
+    <div style={{ marginTop: '16px', padding: '16px', backgroundColor: 'var(--bg-secondary)', borderRadius: '8px' }}>
+      {isPinSet ? (
+        <>
+          <div style={{ marginBottom: '16px', fontSize: '14px', color: 'var(--text-primary)' }}>
+            PIN-код установлен
+          </div>
+          <div className="settings-field">
+            <label>
+              Текущий PIN-код
+              <input
+                type="password"
+                value={currentPin}
+                onChange={(e) => setCurrentPin(e.target.value)}
+                placeholder="Введите текущий PIN"
+                style={{ letterSpacing: '4px' }}
+              />
+            </label>
+          </div>
+          <div className="settings-field">
+            <label>
+              Новый PIN-код
+              <input
+                type="password"
+                value={newPin}
+                onChange={(e) => setNewPin(e.target.value)}
+                placeholder="Введите новый PIN (минимум 4 символа)"
+                style={{ letterSpacing: '4px' }}
+              />
+            </label>
+          </div>
+          <div className="settings-field">
+            <label>
+              Подтвердите новый PIN-код
+              <input
+                type="password"
+                value={confirmPin}
+                onChange={(e) => setConfirmPin(e.target.value)}
+                placeholder="Повторите новый PIN"
+                style={{ letterSpacing: '4px' }}
+              />
+            </label>
+          </div>
+          {error && (
+            <div style={{ fontSize: '12px', color: '#e74c3c', marginBottom: '12px' }}>{error}</div>
+          )}
+          {success && (
+            <div style={{ fontSize: '12px', color: '#27ae60', marginBottom: '12px' }}>{success}</div>
+          )}
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              type="button"
+              className="small-button"
+              onClick={handleChangePin}
+              disabled={saving || !newPin || !confirmPin}
+            >
+              Изменить PIN
+            </button>
+            <button
+              type="button"
+              className="small-button"
+              onClick={handleClearPin}
+              disabled={saving || !currentPin}
+              style={{ backgroundColor: '#e74c3c' }}
+            >
+              Удалить PIN
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          <div style={{ marginBottom: '16px', fontSize: '14px', color: 'var(--text-primary)' }}>
+            Установите PIN-код для защиты доступа к программе
+          </div>
+          <div className="settings-field">
+            <label>
+              PIN-код
+              <input
+                type="password"
+                value={newPin}
+                onChange={(e) => setNewPin(e.target.value)}
+                placeholder="Введите PIN (минимум 4 символа)"
+                style={{ letterSpacing: '4px' }}
+              />
+            </label>
+          </div>
+          <div className="settings-field">
+            <label>
+              Подтвердите PIN-код
+              <input
+                type="password"
+                value={confirmPin}
+                onChange={(e) => setConfirmPin(e.target.value)}
+                placeholder="Повторите PIN"
+                style={{ letterSpacing: '4px' }}
+              />
+            </label>
+          </div>
+          {error && (
+            <div style={{ fontSize: '12px', color: '#e74c3c', marginBottom: '12px' }}>{error}</div>
+          )}
+          {success && (
+            <div style={{ fontSize: '12px', color: '#27ae60', marginBottom: '12px' }}>{success}</div>
+          )}
+          <button
+            type="button"
+            className="small-button"
+            onClick={handleSetPin}
+            disabled={saving || !newPin || !confirmPin}
+          >
+            Установить PIN
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
 
 interface SettingsProps {
   onClose: () => void;
@@ -19,39 +278,14 @@ export function Settings({ onClose, onSaveSuccess, onSaveError }: SettingsProps)
   });
   const [appSettings, setAppSettings] = useState<AppSettings>({
     overlayShortcut: 'CommandOrControl+Shift+P',
-    openInOverlay: false,
     language: 'ru',
   });
   const [appVersion, setAppVersion] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const updateCheckTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     loadSettings();
-
-    // Подписываемся на события обновления
-    if (window.electronAPI && (window.electronAPI as any).ipcRenderer) {
-      const ipcRenderer = (window.electronAPI as any).ipcRenderer;
-      
-      const handleUpdateNotAvailable = () => {
-        if (updateCheckTimeoutRef.current) {
-          clearTimeout(updateCheckTimeoutRef.current);
-        }
-        setTimeout(() => {
-          alert('Программа обновлена до последней версии');
-        }, 500);
-      };
-
-      ipcRenderer.on('update-not-available', handleUpdateNotAvailable);
-
-      return () => {
-        ipcRenderer.removeAllListeners('update-not-available');
-        if (updateCheckTimeoutRef.current) {
-          clearTimeout(updateCheckTimeoutRef.current);
-        }
-      };
-    }
   }, []);
 
   const loadSettings = async () => {
@@ -62,6 +296,9 @@ export function Settings({ onClose, onSaveSuccess, onSaveError }: SettingsProps)
       setCloudSettings(cloud);
       setAppSettings(app);
       setAppVersion(version);
+      // Применяем тему при загрузке
+      const theme = app.theme || 'light';
+      document.documentElement.setAttribute('data-theme', theme);
     } catch (error) {
       console.error('Ошибка загрузки настроек:', error);
     } finally {
@@ -117,21 +354,24 @@ export function Settings({ onClose, onSaveSuccess, onSaveError }: SettingsProps)
           <section className="settings-section">
             <h3>Яндекс.Диск</h3>
             <div className="settings-field">
-              <label>
-                <input
-                  type="checkbox"
-                  checked={cloudSettings.yandexDisk?.enabled || false}
-                  onChange={(e) =>
-                    setCloudSettings({
-                      ...cloudSettings,
-                      yandexDisk: {
-                        ...cloudSettings.yandexDisk,
-                        enabled: e.target.checked,
-                      },
-                    })
-                  }
-                />
-                Включить синхронизацию с Яндекс.Диском
+              <label className="toggle-label">
+                <span>Включить синхронизацию с Яндекс.Диском</span>
+                <div className="toggle-switch">
+                  <input
+                    type="checkbox"
+                    checked={cloudSettings.yandexDisk?.enabled || false}
+                    onChange={(e) =>
+                      setCloudSettings({
+                        ...cloudSettings,
+                        yandexDisk: {
+                          ...cloudSettings.yandexDisk,
+                          enabled: e.target.checked,
+                        },
+                      })
+                    }
+                  />
+                  <span className="toggle-slider"></span>
+                </div>
               </label>
             </div>
             {cloudSettings.yandexDisk?.enabled && (
@@ -171,7 +411,11 @@ export function Settings({ onClose, onSaveSuccess, onSaveError }: SettingsProps)
                                 },
                               });
                               setTimeout(() => {
-                                alert('Авторизация успешна! Токен сохранен.');
+                                if (result.hasExistingFiles && result.files && result.files.length > 0) {
+                                  alert(`Авторизация успешна! Токен сохранен.\n\nНайдены существующие файлы резервных копий на Яндекс.Диске:\n${result.files.join('\n')}`);
+                                } else {
+                                  alert('Авторизация успешна! Токен сохранен.');
+                                }
                               }, 0);
                             } else {
                               setTimeout(() => {
@@ -262,28 +506,15 @@ export function Settings({ onClose, onSaveSuccess, onSaveError }: SettingsProps)
                   try {
                     const result = await window.electronAPI.checkForUpdates();
                     if (result.success) {
-                      // Не показываем alert сразу, ждем результата проверки
-                      // Сообщение будет показано через событие update-not-available или update-available
-                      updateCheckTimeoutRef.current = setTimeout(() => {
-                        // Если через 3 секунды не пришло событие, значит проверка еще идет
-                      }, 3000);
+                      alert(
+                        'Проверка запущена. Если доступна новая версия, она загрузится и установится в фоне. Иначе у вас уже последняя версия.'
+                      );
                     } else {
-                      // Если это сообщение о том, что обновлений нет
-                      if (result.message?.includes('не найдены') || result.message?.includes('not available') || result.message?.includes('максимальной')) {
-                        setTimeout(() => {
-                          alert('Программа обновлена до последней версии');
-                        }, 0);
-                      } else {
-                        setTimeout(() => {
-                          alert(result.message || 'Ошибка проверки обновлений');
-                        }, 0);
-                      }
+                      alert(result.message || 'Ошибка проверки обновлений');
                     }
                   } catch (error) {
                     console.error('Ошибка проверки обновлений:', error);
-                    setTimeout(() => {
-                      alert('Ошибка проверки обновлений');
-                    }, 0);
+                    alert('Ошибка проверки обновлений');
                   }
                 }}
               >
@@ -347,90 +578,150 @@ export function Settings({ onClose, onSaveSuccess, onSaveError }: SettingsProps)
                 Формат: CommandOrControl+Shift+P (для Windows: Ctrl+Shift+P, для Mac: Cmd+Shift+P)
               </small>
             </div>
+          </section>
+
+          <section className="settings-section">
+            <h3>Автозапуск</h3>
             <div className="settings-field">
-              <label>
-                <input
-                  type="checkbox"
-                  checked={appSettings.openInOverlay || false}
-                  onChange={(e) =>
-                    setAppSettings({
-                      ...appSettings,
-                      openInOverlay: e.target.checked,
-                    })
-                  }
-                />
-                Открывать программу в оверлее при запуске
+              <label className="toggle-label">
+                <span>Запускать при старте Windows</span>
+                <div className="toggle-switch">
+                  <input
+                    type="checkbox"
+                    checked={appSettings.autoStart || false}
+                    onChange={(e) =>
+                      setAppSettings({
+                        ...appSettings,
+                        autoStart: e.target.checked,
+                      })
+                    }
+                  />
+                  <span className="toggle-slider"></span>
+                </div>
               </label>
+              <small>
+                При включении автозапуска программа будет автоматически загружаться в системный трей
+              </small>
+            </div>
+            <div className="settings-field">
+              <label className="toggle-label">
+                <span>Требовать авторизацию при открытии после автозапуска</span>
+                <div className="toggle-switch">
+                  <input
+                    type="checkbox"
+                    checked={appSettings.requireAuthOnStartup !== false}
+                    onChange={(e) =>
+                      setAppSettings({
+                        ...appSettings,
+                        requireAuthOnStartup: e.target.checked,
+                      })
+                    }
+                  />
+                  <span className="toggle-slider"></span>
+                </div>
+              </label>
+              <small>
+                При включении будет запрашиваться авторизация при открытии программы из трея после автозапуска
+              </small>
             </div>
           </section>
 
           <section className="settings-section">
-            <h3>Автозапуск и трей</h3>
+            <h3>Внешний вид</h3>
             <div className="settings-field">
               <label>
-                <input
-                  type="checkbox"
-                  checked={appSettings.autoStart || false}
+                Тема оформления
+                <select
+                  value={appSettings.theme || 'light'}
+                  onChange={(e) => {
+                    const newTheme = e.target.value as 'light' | 'dark';
+                    setAppSettings({
+                      ...appSettings,
+                      theme: newTheme,
+                    });
+                    // Применяем тему сразу
+                    document.documentElement.setAttribute('data-theme', newTheme);
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    marginTop: '6px',
+                    border: '1px solid var(--border)',
+                    borderRadius: '6px',
+                    background: 'var(--bg-primary)',
+                    color: 'var(--text-primary)',
+                    fontSize: '14px',
+                  }}
+                >
+                  <option value="light">Светлая</option>
+                  <option value="dark">Темная</option>
+                </select>
+              </label>
+              <small>
+                Выберите тему оформления интерфейса
+              </small>
+            </div>
+          </section>
+
+          <section className="settings-section">
+            <h3>Авторизация</h3>
+            <div className="settings-field">
+              <label>
+                Способ авторизации
+                <select
+                  value={appSettings.authType || 'windows-pin'}
                   onChange={(e) =>
                     setAppSettings({
                       ...appSettings,
-                      autoStart: e.target.checked,
+                      authType: e.target.value as 'windows-pin' | 'app-pin' | 'none',
                     })
                   }
-                />
-                Запускать при старте Windows
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    marginTop: '6px',
+                    border: '1px solid var(--border)',
+                    borderRadius: '6px',
+                    background: 'var(--bg-primary)',
+                    color: 'var(--text-primary)',
+                    fontSize: '14px',
+                  }}
+                >
+                  <option value="windows-pin">Windows PIN (Windows Hello)</option>
+                  <option value="app-pin">Собственный PIN-код приложения</option>
+                  <option value="none">Без авторизации</option>
+                </select>
               </label>
+              <small>
+                Выберите способ авторизации для доступа к программе
+              </small>
             </div>
-            <div className="settings-field">
-              <label>
-                <input
-                  type="checkbox"
-                  checked={appSettings.startMinimized || false}
-                  onChange={(e) =>
-                    setAppSettings({
-                      ...appSettings,
-                      startMinimized: e.target.checked,
-                    })
-                  }
-                />
-                Запускать свернутым в трей
-              </label>
-            </div>
-            <div className="settings-field">
-              <label>
-                <input
-                  type="checkbox"
-                  checked={appSettings.minimizeToTray || false}
-                  onChange={(e) =>
-                    setAppSettings({
-                      ...appSettings,
-                      minimizeToTray: e.target.checked,
-                    })
-                  }
-                />
-                Сворачивать в трей вместо панели задач
-              </label>
-            </div>
+            {appSettings.authType === 'app-pin' && (
+              <AppPinSettings />
+            )}
           </section>
 
           <section className="settings-section">
             <h3>Google Drive</h3>
             <div className="settings-field">
-              <label>
-                <input
-                  type="checkbox"
-                  checked={cloudSettings.googleDrive?.enabled || false}
-                  onChange={(e) =>
-                    setCloudSettings({
-                      ...cloudSettings,
-                      googleDrive: {
-                        ...cloudSettings.googleDrive,
-                        enabled: e.target.checked,
-                      },
-                    })
-                  }
-                />
-                Включить синхронизацию с Google Drive
+              <label className="toggle-label">
+                <span>Включить синхронизацию с Google Drive</span>
+                <div className="toggle-switch">
+                  <input
+                    type="checkbox"
+                    checked={cloudSettings.googleDrive?.enabled || false}
+                    onChange={(e) =>
+                      setCloudSettings({
+                        ...cloudSettings,
+                        googleDrive: {
+                          ...cloudSettings.googleDrive,
+                          enabled: e.target.checked,
+                        },
+                      })
+                    }
+                  />
+                  <span className="toggle-slider"></span>
+                </div>
               </label>
             </div>
             {cloudSettings.googleDrive?.enabled && (

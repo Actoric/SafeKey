@@ -191,6 +191,49 @@ export class YandexDiskService {
   }
 
   /**
+   * Скачать файл с Яндекс.Диска (получить содержимое)
+   */
+  async downloadFile(remoteFileName: string): Promise<Buffer | null> {
+    try {
+      let normalizedBasePath = this.basePath.trim();
+      if (normalizedBasePath.startsWith('/')) {
+        normalizedBasePath = normalizedBasePath.substring(1);
+      }
+      const remotePath = normalizedBasePath ? `disk:/${normalizedBasePath}/${remoteFileName}` : `disk:/${remoteFileName}`;
+      const url = `https://cloud-api.yandex.net/v1/disk/resources/download?path=${encodeURIComponent(remotePath)}`;
+      const response = await httpRequest(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `OAuth ${this.token}`,
+        },
+      });
+
+      if (response.status < 200 || response.status >= 300) {
+        console.error('[YandexDisk] Ошибка получения ссылки на скачивание:', response.status, response.data);
+        return null;
+      }
+
+      const data = JSON.parse(response.data) as YandexDiskResponse;
+      const downloadHref = data.href;
+      if (!downloadHref) {
+        console.error('[YandexDisk] Нет href в ответе');
+        return null;
+      }
+
+      const downloadResponse = await httpRequest(downloadHref, { method: 'GET' });
+      if (downloadResponse.status < 200 || downloadResponse.status >= 300) {
+        console.error('[YandexDisk] Ошибка скачивания файла:', downloadResponse.status);
+        return null;
+      }
+
+      return Buffer.from(downloadResponse.data, 'binary');
+    } catch (error) {
+      console.error('[YandexDisk] Ошибка при скачивании файла:', error);
+      return null;
+    }
+  }
+
+  /**
    * Удалить файл с Яндекс.Диска
    */
   async deleteFile(remoteFileName: string): Promise<boolean> {

@@ -46,7 +46,18 @@ const electronAPI = {
   getCategories: () => ipcRenderer.invoke('get-categories'),
   updateCategory: (id: number, name: string) =>
     ipcRenderer.invoke('update-category', id, name),
+  updatePasswordEntryBoundApp: (id: number, boundApp: string | null) =>
+    ipcRenderer.invoke('update-password-entry-bound-app', id, boundApp),
+  getActiveApp: () => ipcRenderer.invoke('get-active-app'),
+  getRunningApps: () => ipcRenderer.invoke('get-running-apps'),
+  selectExeFile: () => ipcRenderer.invoke('select-exe-file'),
   deleteCategory: (id: number) => ipcRenderer.invoke('delete-category', id),
+  showDeleteCategoryDialog: (categoryName: string, hasChildren: boolean) => 
+    ipcRenderer.invoke('show-delete-category-dialog', categoryName, hasChildren),
+  showDeleteSecurityQuestionDialog: (entryTitle: string) => 
+    ipcRenderer.invoke('show-delete-security-question-dialog', entryTitle),
+  showDeleteBackupCodeDialog: (codeText: string, isEntry?: boolean) => 
+    ipcRenderer.invoke('show-delete-backup-code-dialog', codeText, isEntry),
   getPasswordsByCategory: (categoryId: number | null) =>
     ipcRenderer.invoke('get-passwords-by-category', categoryId),
   getCloudSettings: () => ipcRenderer.invoke('get-cloud-settings'),
@@ -57,6 +68,13 @@ const electronAPI = {
   syncToCloud: () => ipcRenderer.invoke('sync-to-cloud'),
   checkCloudSync: () => ipcRenderer.invoke('check-cloud-sync'),
   getWindowsUsername: () => ipcRenderer.invoke('get-windows-username'),
+  setAppPin: (pin: string) => ipcRenderer.invoke('set-app-pin', pin),
+  verifyAppPin: (pin: string) => ipcRenderer.invoke('verify-app-pin', pin),
+  checkAppPinSet: () => ipcRenderer.invoke('check-app-pin-set'),
+  clearAppPin: () => ipcRenderer.invoke('clear-app-pin'),
+  checkAuthStatus: () => ipcRenderer.invoke('check-auth-status'),
+  resetAuthStatus: () => ipcRenderer.invoke('reset-auth-status'),
+  setAuthStatus: (status: boolean) => ipcRenderer.invoke('set-auth-status', status),
   // Управление окном
   minimize: () => ipcRenderer.invoke('window-minimize'),
   maximize: () => ipcRenderer.invoke('window-maximize'),
@@ -99,16 +117,13 @@ const electronAPI = {
   copyToClipboard: (text: string) => ipcRenderer.invoke('copy-to-clipboard', text),
   // URL
   openUrl: (url: string) => ipcRenderer.invoke('open-url', url),
-  // IPC Renderer для подписки на события
+  // IPC Renderer для подписки на события и отправки сообщений
   ipcRenderer: {
     on: (channel: string, callback: (...args: any[]) => void) => {
-      ipcRenderer.on(channel, (_event, ...args) => {
-        // Логируем для отладки событий обновления
-        if (channel.startsWith('update-')) {
-          console.log(`[Preload] Событие ${channel} получено, аргументы:`, args);
-        }
-        callback(...args);
-      });
+      ipcRenderer.on(channel, (_event, ...args) => callback(...args));
+    },
+    send: (channel: string, ...args: any[]) => {
+      ipcRenderer.send(channel, ...args);
     },
     removeAllListeners: (channel: string) => {
       ipcRenderer.removeAllListeners(channel);

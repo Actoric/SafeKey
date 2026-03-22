@@ -34,6 +34,7 @@ export interface DatabasePasswordEntry {
   encrypted_data: string;
   tags: string;
   is_favorite: number;
+  bound_app: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -55,12 +56,19 @@ export interface ElectronAPI {
   getCategories: () => Promise<Category[]>;
   updateCategory: (id: number, name: string) => Promise<Category | null>;
   deleteCategory: (id: number) => Promise<boolean>;
+  updatePasswordEntryBoundApp: (id: number, boundApp: string | null) => Promise<DatabasePasswordEntry | null>;
+  showDeleteCategoryDialog: (categoryName: string, hasChildren: boolean) => Promise<boolean>;
+  getActiveApp: () => Promise<string | null>;
+  getRunningApps: () => Promise<string[]>;
+  selectExeFile: () => Promise<string | null>;
+  showDeleteSecurityQuestionDialog: (entryTitle: string) => Promise<boolean>;
+  showDeleteBackupCodeDialog: (codeText: string, isEntry?: boolean) => Promise<boolean>;
   getPasswordsByCategory: (categoryId: number | null) => Promise<DatabasePasswordEntry[]>;
   // Cloud storage settings
   getCloudSettings: () => Promise<CloudSettings>;
   saveCloudSettings: (settings: CloudSettings) => Promise<void>;
   syncToCloud: () => Promise<boolean>;
-  authorizeYandexDisk: () => Promise<{ success: boolean; token?: string }>;
+  authorizeYandexDisk: () => Promise<{ success: boolean; token?: string; hasExistingFiles?: boolean; files?: string[] }>;
   authorizeGoogleDrive: () => Promise<{ success: boolean; token?: string }>;
   checkCloudSync: () => Promise<{ synced: boolean; message: string; files?: string[] }>;
   // App settings
@@ -100,6 +108,19 @@ export interface ElectronAPI {
   verifyWindowsPin: () => Promise<boolean>;
   checkWindowsPinAvailable: () => Promise<boolean>;
   getWindowsUsername: () => Promise<string>;
+  setAppPin: (pin: string) => Promise<{ success: boolean }>;
+  verifyAppPin: (pin: string) => Promise<boolean>;
+  checkAppPinSet: () => Promise<boolean>;
+  clearAppPin: () => Promise<{ success: boolean }>;
+  checkAuthStatus: () => Promise<boolean>;
+  resetAuthStatus: () => Promise<{ success: boolean }>;
+  setAuthStatus: (status: boolean) => Promise<{ success: boolean }>;
+  // IPC Renderer для подписки на события
+  ipcRenderer?: {
+    on: (channel: string, callback: (...args: any[]) => void) => void;
+    send: (channel: string, ...args: any[]) => void;
+    removeAllListeners: (channel: string) => void;
+  };
 }
 
 export interface CloudSettings {
@@ -115,6 +136,10 @@ export interface CloudSettings {
   };
 }
 
+export type AuthType = 'windows-pin' | 'app-pin' | 'none';
+
+export type Theme = 'light' | 'dark';
+
 export interface AppSettings {
   overlayShortcut?: string;
   openInOverlay?: boolean;
@@ -122,18 +147,23 @@ export interface AppSettings {
   startMinimized?: boolean;
   minimizeToTray?: boolean;
   language?: string;
+  authType?: AuthType;
+  requireAuthOnStartup?: boolean;
+  theme?: Theme;
 }
 
 export interface CreatePasswordEntryRequest {
   title: string;
   category_id?: number | null;
   data: PasswordEntryData;
+  bound_app?: string | null;
 }
 
 export interface UpdatePasswordEntryRequest {
   title?: string;
   category_id?: number | null;
   data?: PasswordEntryData;
+  bound_app?: string | null;
 }
 
 export interface BackupCode {

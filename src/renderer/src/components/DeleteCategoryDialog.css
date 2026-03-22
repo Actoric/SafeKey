@@ -1,0 +1,130 @@
+.delete-category-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.delete-category-dialog {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 20px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  width: 450px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.delete-category-dialog-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(224, 224, 224, 0.5);
+  background: rgba(255, 255, 255, 0.7);
+  position: relative;
+}
+
+.delete-category-dialog-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: rgba(229, 57, 53, 0.1);
+  border-radius: 10px;
+  color: #e53935;
+}
+
+.delete-category-dialog-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  flex: 1;
+}
+
+.delete-category-dialog-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  color: #666;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.delete-category-dialog-close:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: #333;
+}
+
+.delete-category-dialog-content {
+  padding: 24px;
+}
+
+.delete-category-dialog-content p {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  color: #333;
+  line-height: 1.5;
+}
+
+.delete-category-dialog-content p:last-child {
+  margin-bottom: 0;
+}
+
+.delete-category-dialog-content strong {
+  color: #4a90e2;
+  font-weight: 600;
+}
+
+.delete-category-dialog-actions {
+  display: flex;
+  gap: 12px;
+  padding: 16px 24px;
+  border-top: 1px solid rgba(224, 224, 224, 0.5);
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.delete-category-dialog-button {
+  flex: 1;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.delete-category-dialog-button.secondary {
+  background: rgba(224, 224, 224, 0.6);
+  color: #333;
+}
+
+.delete-category-dialog-button.secondary:hover {
+  background: rgba(200, 200, 200, 0.8);
+}
+
+.delete-category-dialog-button.danger {
+  background: #e53935;
+  color: white;
+}
+
+.delete-category-dialog-button.danger:hover {
+  background: #c62828;
+}

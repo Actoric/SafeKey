@@ -16,5 +16,6 @@ export interface Category {
   name: string;
   parent_id: number | null;
   level: number;
+  bound_app: string | null;
   created_at: string;
 }

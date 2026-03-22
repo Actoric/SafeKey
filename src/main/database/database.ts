@@ -85,14 +85,36 @@ export class DatabaseService {
         WHERE id = NEW.id;
       END;
     `);
+
+    // Миграция: добавляем поле bound_app в password_entries если его нет
+    try {
+      const passwordTableInfo = this.db.prepare("PRAGMA table_info(password_entries)").all() as Array<{ name: string }>;
+      const hasPasswordBoundApp = passwordTableInfo.some(col => col.name === 'bound_app');
+      if (!hasPasswordBoundApp) {
+        console.log('[Database] Добавляем поле bound_app в таблицу password_entries');
+        this.db.exec('ALTER TABLE password_entries ADD COLUMN bound_app TEXT DEFAULT NULL');
+      }
+      
+      // Удаляем bound_app из categories если он там есть (старая версия)
+      const categoryTableInfo = this.db.prepare("PRAGMA table_info(categories)").all() as Array<{ name: string }>;
+      const hasCategoryBoundApp = categoryTableInfo.some(col => col.name === 'bound_app');
+      if (hasCategoryBoundApp) {
+        console.log('[Database] Удаляем поле bound_app из таблицы categories (переносим на пароли)');
+        // SQLite не поддерживает DROP COLUMN напрямую, нужно пересоздать таблицу
+        // Но для безопасности оставим поле, просто не будем его использовать
+        console.log('[Database] Поле bound_app в categories оставлено для совместимости, но не используется');
+      }
+    } catch (error) {
+      console.error('[Database] Ошибка миграции bound_app:', error);
+    }
   }
 
-  createPasswordEntry(encryptedData: string, title: string, categoryId?: number | null): PasswordEntry | null {
+  createPasswordEntry(encryptedData: string, title: string, categoryId?: number | null, boundApp?: string | null): PasswordEntry | null {
     const stmt = this.db.prepare(`
-      INSERT INTO password_entries (title, category_id, encrypted_data)
-      VALUES (?, ?, ?)
+      INSERT INTO password_entries (title, category_id, encrypted_data, bound_app)
+      VALUES (?, ?, ?, ?)
     `);
-    const result = stmt.run(title, categoryId || null, encryptedData);
+    const result = stmt.run(title, categoryId || null, encryptedData, boundApp || null);
     return this.getPasswordEntryById(result.lastInsertRowid as number)!;
   }
 
@@ -106,21 +128,41 @@ export class DatabaseService {
     return stmt.all() as PasswordEntry[];
   }
 
-  updatePasswordEntry(id: number, encryptedData: string, title?: string, categoryId?: number | null): PasswordEntry | null {
-    if (title) {
-      const stmt = this.db.prepare(`
-        UPDATE password_entries 
-        SET encrypted_data = ?, title = ?, category_id = ?
-        WHERE id = ?
-      `);
-      stmt.run(encryptedData, title, categoryId || null, id);
+  updatePasswordEntry(id: number, encryptedData: string, title?: string, categoryId?: number | null, boundApp?: string | null): PasswordEntry | null {
+    if (title !== undefined) {
+      // Если boundApp передан, обновляем его, иначе оставляем текущее значение
+      if (boundApp !== undefined) {
+        const stmt = this.db.prepare(`
+          UPDATE password_entries 
+          SET encrypted_data = ?, title = ?, category_id = ?, bound_app = ?
+          WHERE id = ?
+        `);
+        stmt.run(encryptedData, title, categoryId || null, boundApp || null, id);
+      } else {
+        const stmt = this.db.prepare(`
+          UPDATE password_entries 
+          SET encrypted_data = ?, title = ?, category_id = ?
+          WHERE id = ?
+        `);
+        stmt.run(encryptedData, title, categoryId || null, id);
+      }
     } else {
-      const stmt = this.db.prepare(`
-        UPDATE password_entries 
-        SET encrypted_data = ?
-        WHERE id = ?
-      `);
-      stmt.run(encryptedData, id);
+      // Если boundApp передан, обновляем его, иначе оставляем текущее значение
+      if (boundApp !== undefined) {
+        const stmt = this.db.prepare(`
+          UPDATE password_entries 
+          SET encrypted_data = ?, bound_app = ?
+          WHERE id = ?
+        `);
+        stmt.run(encryptedData, boundApp || null, id);
+      } else {
+        const stmt = this.db.prepare(`
+          UPDATE password_entries 
+          SET encrypted_data = ?
+          WHERE id = ?
+        `);
+        stmt.run(encryptedData, id);
+      }
     }
     return this.getPasswordEntryById(id);
   }
@@ -210,6 +252,12 @@ export class DatabaseService {
     const stmt = this.db.prepare('UPDATE categories SET name = ? WHERE id = ?');
     stmt.run(name, id);
     return this.getCategoryById(id);
+  }
+
+  updatePasswordEntryBoundApp(id: number, boundApp: string | null): PasswordEntry | null {
+    const stmt = this.db.prepare('UPDATE password_entries SET bound_app = ? WHERE id = ?');
+    stmt.run(boundApp, id);
+    return this.getPasswordEntryById(id);
   }
 
   deleteCategory(id: number): boolean {
