@@ -51,3 +51,5 @@ master.key
 
 # Backup files
 backup/
+
+# Commit messages: use UTF-8; prefer English for release tags (see docs/GIT_UTF8_WINDOWS.md)

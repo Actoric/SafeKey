@@ -19,7 +19,8 @@
     "dist": "npm run package",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "check-icon": "node check-icon.js",
-    "check-config": "node check-electron-builder-config.js"
+    "check-config": "node check-electron-builder-config.js",
+    "upload:release": "powershell -ExecutionPolicy Bypass -File scripts/upload-release.ps1"
   },
   "keywords": [
     "password-manager",
@@ -41,7 +42,7 @@
     "concurrently": "^8.2.2",
     "cross-env": "^7.0.3",
     "electron": "^28.3.3",
-    "electron-builder": "^24.9.1",
+    "electron-builder": "24.6.3",
     "eslint": "^8.55.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",

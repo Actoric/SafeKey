@@ -11,7 +11,32 @@ npm install
 npm run build:win
 ```
 
-Артефакты обычно в `release/` (см. `electron-builder` в `package.json`).
+Артефакты в `release/`:
+
+- `SafeKey-Setup-x64.exe` — установщик  
+- `latest.yml` — метаданные для electron-updater (обязателен)
+
+### Если сборка падает на `winCodeSign` / symbolic link
+
+На Windows без прав администратора старые версии `7zip` в electron-builder ломают распаковку. В проекте зафиксирован **`electron-builder@24.6.3`** (обход). Альтернативы: **PowerShell от имени администратора** или **режим разработчика** Windows (Параметры → Для разработчиков).
+
+## Загрузка в GitHub Release
+
+Нужен доступ к репозиторию (один раз):
+
+```powershell
+gh auth login
+```
+
+После `npm run build:win`:
+
+```powershell
+.\scripts\upload-release.ps1
+```
+
+Скрипт загрузит `release\SafeKey-Setup-x64.exe` и `release\latest.yml` в релиз с тегом `v1.2.2`.
+
+Либо вручную: **Releases → нужный тег → Edit → прикрепить файлы**.
 
 ## GitHub Release
 
