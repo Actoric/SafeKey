@@ -1,8 +1,8 @@
-// Конфигурация приложения
+import { APP_VERSION } from '../version-info';
 
 export const APP_CONFIG = {
   name: 'SafeKey',
-  version: '1.2.2',
+  version: APP_VERSION,
   database: {
     name: 'safekey.db',
   },
@@ -17,12 +17,12 @@ export const APP_CONFIG = {
   },
   window: {
     main: {
-      width: 1000,
-      height: 700,
-      minWidth: 1000,
-      minHeight: 700,
-      maxWidth: 1000,
-      maxHeight: 700,
+      width: 1280,
+      height: 800,
+      minWidth: 1280,
+      minHeight: 800,
+      maxWidth: 1280,
+      maxHeight: 800,
     },
     overlay: {
       width: 600,

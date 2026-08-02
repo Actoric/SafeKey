@@ -11,7 +11,6 @@ export function PinCodeLogin() {
   const { login } = useAuth();
 
   useEffect(() => {
-    // Получаем имя пользователя Windows через IPC
     const loadUsername = async () => {
       try {
         if (window.electronAPI && typeof window.electronAPI.getWindowsUsername === 'function') {
@@ -27,7 +26,6 @@ export function PinCodeLogin() {
     };
     loadUsername();
 
-    // Загружаем настройки авторизации
     const loadAuthSettings = async () => {
       try {
         const settings = await window.electronAPI.getAppSettings();
@@ -50,22 +48,16 @@ export function PinCodeLogin() {
           setIsChecking(false);
           return;
         }
-        console.log('[PinCodeLogin] Запуск проверки PIN-кода приложения...');
         const result = await window.electronAPI.verifyAppPin(appPin);
         if (result) {
-          // Обновляем состояние через login
           await login();
         } else {
           setError('Неверный PIN-код');
         }
       } else {
-        console.log('[PinCodeLogin] Запуск проверки PIN-кода Windows...');
         const result = await login();
         if (!result) {
-          console.log('[PinCodeLogin] PIN-код неверный или отменен');
           setError('PIN-код неверный или вход отменен');
-        } else {
-          console.log('[PinCodeLogin] Вход успешен');
         }
       }
     } catch (err) {
@@ -78,88 +70,70 @@ export function PinCodeLogin() {
 
   return (
     <div className="master-password-container">
-      <div className="master-password-card">
-        <h1>SafeKey</h1>
-        {username && (
-          <p className="welcome-message" style={{ fontSize: '16px', margin: '0 0 12px 0', padding: 0, color: 'var(--text-primary)', textAlign: 'center', lineHeight: '1.4' }}>
-            Добро пожаловать, {username}!
-          </p>
-        )}
-        <p className="subtitle">
-          {isChecking 
-            ? (authType === 'app-pin' ? 'Проверка PIN-кода...' : 'Проверка PIN-кода Windows...')
-            : (authType === 'app-pin' ? 'Введите PIN-код приложения' : 'Введите PIN-код Windows')}
-        </p>
-        <p className="description">
-          {isChecking 
-            ? (authType === 'app-pin' ? 'Проверка PIN-кода...' : 'Ожидание подтверждения PIN-кода через Windows Hello...')
-            : (authType === 'app-pin' 
-                ? 'Введите PIN-код приложения для доступа к программе'
-                : 'Нажмите кнопку ниже, чтобы войти с помощью PIN-кода Windows. Если PIN-код не установлен, вход будет выполнен автоматически.')}
-        </p>
+      <div className="master-password-shell">
+        <aside className="master-password-visual">
+          <div className="master-password-eyebrow">Keystone</div>
+          <h1>Ваши ключи. Только у вас.</h1>
+          <p>Локальное шифрование, облачный бэкап по желанию — без аккаунта SafeKey в облаке.</p>
+          <div className="master-password-stats">
+            <div><span>Шифрование</span><strong>AES-256</strong></div>
+            <div><span>Бэкап</span><strong>Яндекс / Google</strong></div>
+            <div><span>Оверлей</span><strong>Ctrl+Shift+P</strong></div>
+          </div>
+        </aside>
 
-        {authType === 'app-pin' && !isChecking && (
-          <div style={{ marginBottom: '16px' }}>
+        <div className="master-password-card">
+          <h2>Вход</h2>
+          {username && (
+            <p className="welcome-message">Добро пожаловать, {username}</p>
+          )}
+          <p className="subtitle">
+            {isChecking
+              ? (authType === 'app-pin' ? 'Проверка PIN-кода…' : 'Проверка PIN-кода Windows…')
+              : (authType === 'app-pin' ? 'Введите PIN-код приложения' : 'Подтвердите доступ через Windows Hello')}
+          </p>
+          <p className="description">
+            {isChecking
+              ? (authType === 'app-pin' ? 'Проверяем PIN…' : 'Ожидание подтверждения через Windows Hello…')
+              : (authType === 'app-pin'
+                  ? 'Введите PIN-код приложения для доступа к хранилищу'
+                  : 'Нажмите кнопку ниже, чтобы войти с PIN-кодом Windows.')}
+          </p>
+
+          {authType === 'app-pin' && !isChecking && (
             <input
               type="password"
+              className="pin-input"
               value={appPin}
               onChange={(e) => setAppPin(e.target.value)}
               placeholder="PIN-код"
-              style={{
-                width: '100%',
-                padding: '12px',
-                border: '1px solid var(--border)',
-                borderRadius: '6px',
-                fontSize: '16px',
-                textAlign: 'center',
-                letterSpacing: '4px',
-                backgroundColor: 'var(--bg-primary)',
-                color: 'var(--text-primary)'
-              }}
               onKeyPress={(e) => {
-                if (e.key === 'Enter') {
-                  handleLogin();
-                }
+                if (e.key === 'Enter') handleLogin();
               }}
               autoFocus
             />
-          </div>
-        )}
+          )}
 
-        {error && <div className="error-message">{error}</div>}
+          {error && <div className="error-message">{error}</div>}
 
-        {!isChecking && (
-          <button 
-            type="button" 
-            className="primary-button"
-            onClick={handleLogin}
-            disabled={authType === 'app-pin' && (!appPin || appPin.length < 4)}
-          >
-            {authType === 'app-pin' ? 'Войти' : 'Войти с PIN-кодом Windows'}
-          </button>
-        )}
+          {!isChecking && (
+            <button
+              type="button"
+              className="primary-button"
+              onClick={handleLogin}
+              disabled={authType === 'app-pin' && (!appPin || appPin.length < 4)}
+            >
+              {authType === 'app-pin' ? 'Разблокировать' : 'Войти с Windows Hello'}
+            </button>
+          )}
 
-        {isChecking && (
-          <div style={{ textAlign: 'center', marginTop: '20px' }}>
-            <div style={{ 
-              display: 'inline-block',
-              width: '40px',
-              height: '40px',
-              border: '4px solid #f3f3f3',
-              borderTop: '4px solid #3498db',
-              borderRadius: '50%',
-              animation: 'spin 1s linear infinite'
-            }}></div>
-            <style>{`
-              @keyframes spin {
-                0% { transform: rotate(0deg); }
-                100% { transform: rotate(360deg); }
-              }
-            `}</style>
-          </div>
-        )}
+          {isChecking && (
+            <div style={{ textAlign: 'center', marginTop: '12px' }}>
+              <div className="login-spinner" />
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
 }
-

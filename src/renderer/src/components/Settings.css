@@ -4,22 +4,24 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(21, 32, 28, 0.45);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  backdrop-filter: blur(4px);
 }
 
 .settings-modal {
   background: var(--bg-primary);
-  border-radius: 12px;
+  border-radius: 16px;
   width: 90%;
-  max-width: 600px;
+  max-width: 640px;
   max-height: 90vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
 }
 
 .settings-header {
@@ -31,9 +33,11 @@
 }
 
 .settings-header h2 {
-  font-size: 20px;
-  font-weight: 600;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
   color: var(--text-primary);
+  letter-spacing: -0.03em;
 }
 
 .settings-content {
@@ -51,10 +55,12 @@
 }
 
 .settings-section h3 {
+  font-family: var(--font-display);
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-primary);
   margin-bottom: 16px;
+  letter-spacing: -0.02em;
 }
 
 .settings-field {
@@ -154,6 +160,14 @@
   outline: none;
 }
 
+/* Some modal layouts can overlay controls; force these inputs to stay interactive. */
+.force-interactive-input {
+  pointer-events: auto !important;
+  position: relative;
+  z-index: 2;
+  cursor: text !important;
+}
+
 .settings-field small {
   color: var(--text-secondary);
   font-size: 12px;
@@ -166,6 +180,348 @@
 
 .settings-field a:hover {
   text-decoration: underline;
+}
+
+/* Cloud backup hub */
+.cloud-backup-lead {
+  margin: -8px 0 16px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.cloud-status-bar {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-secondary, var(--bg-tertiary));
+}
+
+.cloud-status-bar.is-ok {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+}
+
+.cloud-status-bar.is-error {
+  border-color: #dc2626;
+}
+
+.cloud-status-icon {
+  color: var(--accent);
+  margin-top: 2px;
+}
+
+.cloud-status-bar.is-error .cloud-status-icon {
+  color: #dc2626;
+}
+
+.cloud-status-bar.is-idle .cloud-status-icon {
+  color: var(--text-secondary);
+}
+
+.cloud-status-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.cloud-status-text strong {
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.cloud-status-error {
+  color: #dc2626;
+  font-size: 12px;
+}
+
+.cloud-provider-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.cloud-provider-tab {
+  position: relative;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  padding: 10px 14px;
+  font-size: 14px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.cloud-provider-tab.is-active {
+  color: var(--text-primary);
+  border-bottom-color: var(--accent);
+  font-weight: 600;
+}
+
+.cloud-tab-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-left: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  vertical-align: middle;
+}
+
+.cloud-provider-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.cloud-connection-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.cloud-connection-state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.cloud-ok-icon {
+  color: #16a34a;
+}
+
+.cloud-warn-icon {
+  color: #ca8a04;
+}
+
+.cloud-connection-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.cloud-disconnect-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 8px;
+}
+
+.cloud-hint,
+.cloud-remote-meta {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.cloud-quota {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-secondary, var(--bg-tertiary));
+}
+
+.cloud-quota-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.cloud-quota-head span:last-child {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.cloud-quota-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.cloud-quota-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width 0.3s ease;
+}
+
+.cloud-quota-free {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.cloud-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.cloud-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cloud-inline-message {
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.cloud-inline-message.is-ok {
+  background: color-mix(in srgb, #16a34a 12%, transparent);
+  color: var(--text-primary);
+}
+
+.cloud-inline-message.is-err {
+  background: color-mix(in srgb, #dc2626 12%, transparent);
+  color: #dc2626;
+}
+
+.cloud-advanced-toggle {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 8px;
+}
+
+.cloud-advanced {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cloud-recovery-setup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 8px 0;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border);
+}
+
+.cloud-advanced label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.cloud-advanced small {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.cloud-versions {
+  margin: 8px 0 16px;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+
+.cloud-versions-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.cloud-versions-header span {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.cloud-versions-empty {
+  font-size: 13px;
+  color: var(--text-secondary);
+  padding: 8px 0;
+}
+
+.cloud-versions-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cloud-version-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.cloud-version-row:last-child {
+  border-bottom: none;
+}
+
+.cloud-version-row.is-latest .cloud-version-date {
+  font-weight: 600;
+}
+
+.cloud-version-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.cloud-version-date {
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.cloud-version-sub {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.small-button {
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.small-button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.small-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .settings-footer {

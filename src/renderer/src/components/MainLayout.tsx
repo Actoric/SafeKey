@@ -9,6 +9,7 @@ import { Toast, ToastType } from './Toast';
 import { CloudSyncProgress } from './CloudSyncProgress';
 import { Trash2, X } from 'lucide-react';
 import { PasswordEntry, PasswordEntryData } from '../../../shared/types';
+import { isCloudBackupEnabled } from '../utils/cloud-sync';
 import './MainLayout.css';
 
 type SortType = 'name-asc' | 'name-desc' | 'date-asc' | 'date-desc' | 'none';
@@ -26,12 +27,41 @@ export function MainLayout() {
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: number | null; ids: number[]; show: boolean }>({ id: null, ids: [], show: false });
   const [sortType, setSortType] = useState<SortType>('none');
-  const [cloudSyncProgress, setCloudSyncProgress] = useState<{ progress: number; visible: boolean }>({ progress: 0, visible: false });
+  const [cloudSyncProgress, setCloudSyncProgress] = useState<{ progress: number; visible: boolean; message?: string }>({ progress: 0, visible: false });
   const passwordEditorRef = useRef<{ refreshCategories: () => void }>(null);
+  const hideProgressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     loadPasswords();
   }, [selectedCategoryId, showFavorites]);
+
+  useEffect(() => {
+    const api = window.electronAPI.ipcRenderer;
+    if (!api) return;
+
+    const onProgress = (payload: { progress: number; message?: string }) => {
+      if (hideProgressTimer.current) {
+        clearTimeout(hideProgressTimer.current);
+        hideProgressTimer.current = null;
+      }
+      setCloudSyncProgress({
+        progress: payload.progress,
+        visible: true,
+        message: payload.message,
+      });
+      if (payload.progress >= 100) {
+        hideProgressTimer.current = setTimeout(() => {
+          setCloudSyncProgress({ progress: 0, visible: false });
+        }, 1000);
+      }
+    };
+
+    api.on('cloud-sync-progress', onProgress);
+    return () => {
+      api.removeAllListeners('cloud-sync-progress');
+      if (hideProgressTimer.current) clearTimeout(hideProgressTimer.current);
+    };
+  }, []);
 
   // Функция для разблокировки всех полей ввода
   const ensureInputsAreEditable = () => {
@@ -224,38 +254,16 @@ export function MainLayout() {
       await loadPasswords();
       setSelectedPassword(null); // Сбрасываем выбранный пароль
       
-      // Синхронизация с облаком в фоне (не блокирует UI)
+      // Синхронизация с облаком в фоне (прогресс через cloud-sync-progress)
       window.electronAPI.getCloudSettings().then(async (cloudSettings) => {
-        if (cloudSettings.yandexDisk?.enabled || cloudSettings.googleDrive?.enabled) {
+        if (isCloudBackupEnabled(cloudSettings)) {
           try {
-            // Показываем прогресс синхронизации
             setCloudSyncProgress({ progress: 0, visible: true });
-            
-            // Симулируем прогресс во время синхронизации
-            const progressInterval = setInterval(() => {
-              setCloudSyncProgress(prev => {
-                if (prev.progress >= 90) {
-                  return prev; // Не превышаем 90% до завершения
-                }
-                return { ...prev, progress: prev.progress + 5 };
-              });
-            }, 200);
-
             await window.electronAPI.syncToCloud();
-            
-            clearInterval(progressInterval);
-            setCloudSyncProgress({ progress: 100, visible: true });
-            
-            // Скрываем прогресс через 1 секунду после завершения
-            setTimeout(() => {
-              setCloudSyncProgress({ progress: 0, visible: false });
-            }, 1000);
-            
             console.log('Синхронизация с облаком завершена');
           } catch (error) {
             console.error('Ошибка синхронизации с облаком:', error);
             setCloudSyncProgress({ progress: 0, visible: false });
-            // Не показываем ошибку пользователю, так как пароль уже сохранен локально
           }
         }
       }).catch((error) => {
@@ -298,7 +306,7 @@ export function MainLayout() {
         
         // Автосохранение на облачные диски после удаления (в фоне)
         window.electronAPI.getCloudSettings().then(async (cloudSettings) => {
-          if (cloudSettings.yandexDisk?.enabled || cloudSettings.googleDrive?.enabled) {
+          if (isCloudBackupEnabled(cloudSettings)) {
             try {
               await window.electronAPI.syncToCloud();
               console.log('Синхронизация с облаком завершена после удаления');
@@ -386,6 +394,7 @@ export function MainLayout() {
             loading={loading}
             sortType={sortType}
             onSortChange={setSortType}
+            selectedId={selectedPassword?.id ?? null}
           />
           <PasswordEditor
             ref={passwordEditorRef}
@@ -450,9 +459,10 @@ export function MainLayout() {
           </div>
         </div>
       )}
-      <CloudSyncProgress 
-        progress={cloudSyncProgress.progress} 
-        visible={cloudSyncProgress.visible} 
+      <CloudSyncProgress
+        progress={cloudSyncProgress.progress}
+        visible={cloudSyncProgress.visible}
+        message={cloudSyncProgress.message}
       />
     </div>
   );

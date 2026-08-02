@@ -2,21 +2,21 @@
   display: flex;
   flex: 1;
   overflow: hidden;
+  background: transparent;
 }
 
 .main-content {
   flex: 1;
   display: flex;
   overflow: hidden;
+  background: var(--bg-secondary);
+  min-width: 0;
 }
 
 .confirm-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  inset: 0;
+  background: rgba(21, 32, 28, 0.45);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -25,15 +25,17 @@
 
 .confirm-dialog {
   background: var(--bg-primary);
-  border-radius: 12px;
+  border-radius: 16px;
   padding: 24px;
   min-width: 300px;
   max-width: 400px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
 }
 
 .confirm-dialog h3 {
   margin: 0 0 12px 0;
+  font-family: var(--font-display);
   font-size: 18px;
   color: var(--text-primary);
 }
@@ -53,8 +55,9 @@
 .confirm-actions .secondary-button,
 .confirm-actions .primary-button {
   padding: 8px 16px;
-  border-radius: 6px;
+  border-radius: 12px;
   font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
   border: none;
   transition: all 0.2s;
@@ -63,10 +66,12 @@
 .confirm-actions .secondary-button {
   background: var(--bg-secondary);
   color: var(--text-primary);
+  border: 1px solid var(--border);
 }
 
 .confirm-actions .secondary-button:hover {
-  background: var(--bg-tertiary);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .confirm-actions .primary-button {
@@ -80,13 +85,9 @@
 
 .delete-password-dialog-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.3);
+  inset: 0;
+  background: rgba(21, 32, 28, 0.4);
   backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -94,15 +95,13 @@
 }
 
 .delete-password-dialog {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-radius: 20px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  background: var(--bg-primary);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
   width: 450px;
   padding: 0;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid var(--border);
 }
 
 .delete-password-dialog-header {
@@ -110,9 +109,8 @@
   align-items: center;
   gap: 12px;
   padding: 20px 24px;
-  border-bottom: 1px solid rgba(224, 224, 224, 0.5);
-  background: rgba(255, 255, 255, 0.7);
-  position: relative;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-secondary);
 }
 
 .delete-password-dialog-icon {
@@ -121,16 +119,17 @@
   justify-content: center;
   width: 40px;
   height: 40px;
-  background: rgba(229, 57, 53, 0.1);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
   border-radius: 10px;
-  color: #e53935;
+  color: var(--danger);
 }
 
 .delete-password-dialog-header h3 {
   margin: 0;
+  font-family: var(--font-display);
   font-size: 18px;
-  font-weight: 600;
-  color: #333;
+  font-weight: 700;
+  color: var(--text-primary);
   flex: 1;
 }
 
@@ -139,17 +138,16 @@
   border: none;
   cursor: pointer;
   padding: 4px;
-  color: #666;
+  color: var(--text-muted);
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
-  transition: all 0.2s;
+  border-radius: 6px;
 }
 
 .delete-password-dialog-close:hover {
-  background: rgba(0, 0, 0, 0.05);
-  color: #333;
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
 }
 
 .delete-password-dialog-content {
@@ -159,48 +157,50 @@
 .delete-password-dialog-content p {
   margin: 0;
   font-size: 14px;
-  color: #333;
+  color: var(--text-secondary);
   line-height: 1.5;
 }
 
 .delete-password-dialog-content strong {
-  color: #4a90e2;
-  font-weight: 600;
+  color: var(--accent);
+  font-weight: 700;
 }
 
 .delete-password-dialog-actions {
   display: flex;
   gap: 12px;
   padding: 16px 24px;
-  border-top: 1px solid rgba(224, 224, 224, 0.5);
-  background: rgba(255, 255, 255, 0.5);
+  border-top: 1px solid var(--border);
+  background: var(--bg-secondary);
 }
 
 .delete-password-dialog-button {
   flex: 1;
   padding: 10px 20px;
   border: none;
-  border-radius: 8px;
+  border-radius: 12px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .delete-password-dialog-button.secondary {
-  background: rgba(224, 224, 224, 0.6);
-  color: #333;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
 }
 
 .delete-password-dialog-button.secondary:hover {
-  background: rgba(200, 200, 200, 0.8);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .delete-password-dialog-button.danger {
-  background: #e53935;
+  background: var(--danger);
   color: white;
 }
 
 .delete-password-dialog-button.danger:hover {
-  background: #c62828;
+  filter: brightness(0.92);
 }

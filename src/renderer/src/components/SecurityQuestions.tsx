@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, Trash2, X, Edit2, Save, ArrowUpDown } from 'lucide-react';
 import { DatabaseSecurityQuestionEntry, SecurityQuestion, CreateSecurityQuestionEntryRequest, UpdateSecurityQuestionEntryRequest, SecurityQuestionEntryData } from '../../../shared/types';
+import { triggerCloudSync } from '../utils/cloud-sync';
 import './SecurityQuestions.css';
 
 type SortType = 'name-asc' | 'name-desc' | 'date-asc' | 'date-desc' | 'none';
@@ -97,14 +98,7 @@ export function SecurityQuestions({ onClose, sortType = 'none', onSortChange }: 
       await loadEntries();
       
       // Автосохранение на облачные диски
-      try {
-        const cloudSettings = await window.electronAPI.getCloudSettings();
-        if (cloudSettings.yandexDisk?.enabled || cloudSettings.googleDrive?.enabled) {
-          await window.electronAPI.syncToCloud();
-        }
-      } catch (error) {
-        console.error('Ошибка синхронизации с облаком:', error);
-      }
+      await triggerCloudSync();
     } catch (error) {
       console.error('Ошибка создания записи:', error);
       alert('Ошибка создания записи');
@@ -128,14 +122,7 @@ export function SecurityQuestions({ onClose, sortType = 'none', onSortChange }: 
       await loadEntries();
       
       // Автосохранение на облачные диски
-      try {
-        const cloudSettings = await window.electronAPI.getCloudSettings();
-        if (cloudSettings.yandexDisk?.enabled || cloudSettings.googleDrive?.enabled) {
-          await window.electronAPI.syncToCloud();
-        }
-      } catch (error) {
-        console.error('Ошибка синхронизации с облаком:', error);
-      }
+      await triggerCloudSync();
     } catch (error) {
       console.error('Ошибка удаления записи:', error);
       alert('Ошибка удаления записи');
@@ -169,14 +156,7 @@ export function SecurityQuestions({ onClose, sortType = 'none', onSortChange }: 
       setSelectedEntry({ ...updated, data: decrypted });
       
       // Автосохранение на облачные диски
-      try {
-        const cloudSettings = await window.electronAPI.getCloudSettings();
-        if (cloudSettings.yandexDisk?.enabled || cloudSettings.googleDrive?.enabled) {
-          await window.electronAPI.syncToCloud();
-        }
-      } catch (error) {
-        console.error('Ошибка синхронизации с облаком:', error);
-      }
+      await triggerCloudSync();
     } catch (error) {
       console.error('Ошибка обновления названия:', error);
       alert('Ошибка обновления названия');
@@ -204,14 +184,7 @@ export function SecurityQuestions({ onClose, sortType = 'none', onSortChange }: 
       setIsEditing(false);
       
       // Автосохранение на облачные диски
-      try {
-        const cloudSettings = await window.electronAPI.getCloudSettings();
-        if (cloudSettings.yandexDisk?.enabled || cloudSettings.googleDrive?.enabled) {
-          await window.electronAPI.syncToCloud();
-        }
-      } catch (error) {
-        console.error('Ошибка синхронизации с облаком:', error);
-      }
+      await triggerCloudSync();
     } catch (error) {
       console.error('Ошибка обновления вопросов:', error);
       alert('Ошибка обновления вопросов');

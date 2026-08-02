@@ -23,6 +23,7 @@ export function TitleBar() {
   return (
     <div className="title-bar">
       <div className="title-bar-drag-region">
+        <span className="brand-mark" aria-hidden />
         <div className="title-bar-title">SafeKey</div>
       </div>
       <div className="title-bar-controls">

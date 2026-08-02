@@ -67,10 +67,40 @@ export interface ElectronAPI {
   // Cloud storage settings
   getCloudSettings: () => Promise<CloudSettings>;
   saveCloudSettings: (settings: CloudSettings) => Promise<void>;
-  syncToCloud: () => Promise<boolean>;
-  authorizeYandexDisk: () => Promise<{ success: boolean; token?: string; hasExistingFiles?: boolean; files?: string[] }>;
-  authorizeGoogleDrive: () => Promise<{ success: boolean; token?: string }>;
-  checkCloudSync: () => Promise<{ synced: boolean; message: string; files?: string[] }>;
+  syncToCloud: () => Promise<{ success: boolean; error?: string; providers?: CloudProvider[] }>;
+  /** Восстановить локальную БД и master.key из облачного бэкапа (перезаписывает текущие данные). */
+  restoreFromCloud: (
+    provider?: CloudProvider,
+    legacyWindowsUsername?: string,
+    backupFileName?: string,
+    recoveryCode?: string
+  ) => Promise<{ success: boolean; error?: string }>;
+  /** @deprecated use restoreFromCloud('yandex') */
+  restoreFromYandexDisk: (legacyWindowsUsername?: string) => Promise<{ success: boolean; error?: string }>;
+  listCloudVersions: (
+    provider?: CloudProvider
+  ) => Promise<{ success: boolean; versions: CloudBackupVersion[]; error?: string }>;
+  getCloudStorageQuota: (
+    provider?: CloudProvider
+  ) => Promise<{ success: boolean; quotas: CloudStorageQuota[]; error?: string }>;
+  configureCloudRecovery: (recoveryCode: string) => Promise<{ success: boolean; error?: string }>;
+  clearCloudRecovery: () => Promise<{ success: boolean; error?: string }>;
+  authorizeYandexDisk: () => Promise<{
+    success: boolean;
+    connected?: boolean;
+    hasExistingFiles?: boolean;
+    files?: string[];
+    error?: string;
+  }>;
+  authorizeGoogleDrive: () => Promise<{
+    success: boolean;
+    connected?: boolean;
+    hasExistingFiles?: boolean;
+    files?: string[];
+    error?: string;
+  }>;
+  disconnectCloudProvider: (provider: CloudProvider) => Promise<{ success: boolean; error?: string }>;
+  checkCloudSync: () => Promise<CloudSyncStatus>;
   // App settings
   getAppSettings: () => Promise<AppSettings>;
   saveAppSettings: (settings: AppSettings) => Promise<void>;
@@ -123,16 +153,65 @@ export interface ElectronAPI {
   };
 }
 
+export type CloudProvider = 'yandex' | 'google';
+
+export interface CloudBackupVersion {
+  file: string;
+  createdAt: string;
+  size: number;
+  device?: string;
+  isLatest?: boolean;
+}
+
+export interface CloudStorageQuota {
+  provider: CloudProvider;
+  total: number;
+  used: number;
+  free: number;
+}
+
+export interface CloudSyncStatus {
+  synced: boolean;
+  message: string;
+  files?: string[];
+  isRestorable?: boolean;
+  hasKeyFile?: boolean;
+  backupFile?: string;
+  keyFile?: string;
+  provider?: CloudProvider;
+  providers?: Array<{
+    provider: CloudProvider;
+    synced: boolean;
+    isRestorable: boolean;
+    message: string;
+    files?: string[];
+    backupFile?: string;
+    keyFile?: string;
+  }>;
+  lastBackupAt?: string;
+  lastError?: string;
+}
+
 export interface CloudSettings {
   yandexDisk?: {
     enabled: boolean;
+    connected?: boolean;
     token?: string;
     path?: string;
   };
   googleDrive?: {
     enabled: boolean;
+    connected?: boolean;
     token?: string;
+    refreshToken?: string;
     folderId?: string;
+    tokenExpiresAt?: number;
+  };
+  status?: {
+    lastBackupAt?: string;
+    lastError?: string;
+    lastProviders?: CloudProvider[];
+    recoveryConfigured?: boolean;
   };
 }
 

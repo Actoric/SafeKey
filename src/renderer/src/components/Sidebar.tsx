@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Search, Plus, Star, Settings, LogOut, ChevronDown, ChevronRight, Folder, FolderOpen, Key, HelpCircle, X } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
-import { Category } from '../../../shared/types';
+import { Category, CloudStorageQuota } from '../../../shared/types';
+import { triggerCloudSync } from '../utils/cloud-sync';
 import './Sidebar.css';
 
 interface SidebarProps {
@@ -40,11 +41,49 @@ export function Sidebar({
   const [showCreateCategory, setShowCreateCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [parentCategoryId, setParentCategoryId] = useState<number | null>(null);
+  const [quotas, setQuotas] = useState<CloudStorageQuota[]>([]);
+  const [cloudConnected, setCloudConnected] = useState(false);
+  const [lastBackupAt, setLastBackupAt] = useState<string | undefined>();
   const { logout } = useAuth();
 
   useEffect(() => {
     loadCategories();
+    loadCloudInfo();
   }, []);
+
+  const loadCloudInfo = async () => {
+    try {
+      const settings = await window.electronAPI.getCloudSettings();
+      const yandex = !!(settings.yandexDisk?.enabled && (settings.yandexDisk.connected || settings.yandexDisk.token));
+      const google = !!(settings.googleDrive?.enabled && (settings.googleDrive.connected || settings.googleDrive.token));
+      setCloudConnected(yandex || google);
+      setLastBackupAt(settings.status?.lastBackupAt);
+      if (yandex || google) {
+        const result = await window.electronAPI.getCloudStorageQuota();
+        if (result.success) setQuotas(result.quotas || []);
+      } else {
+        setQuotas([]);
+      }
+    } catch (error) {
+      console.error('Ошибка загрузки облачной информации:', error);
+    }
+  };
+
+  const formatQuota = (bytes: number) => {
+    if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(0)} МБ`;
+    return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} ГБ`;
+  };
+
+  const formatRelative = (iso?: string) => {
+    if (!iso) return 'нет бэкапа';
+    const diff = Math.round((Date.now() - new Date(iso).getTime()) / 1000);
+    if (diff < 60) return 'только что';
+    if (diff < 3600) return `${Math.floor(diff / 60)} мин назад`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)} ч назад`;
+    return new Date(iso).toLocaleDateString('ru-RU');
+  };
+
+  const providerShort = (p: string) => (p === 'yandex' ? 'Яндекс.Диск' : 'Google Drive');
 
   const loadCategories = async () => {
     try {
@@ -187,18 +226,7 @@ export function Sidebar({
       }
       
       // Синхронизация с облаком в фоне (не блокирует UI)
-      window.electronAPI.getCloudSettings().then(async (cloudSettings) => {
-        if (cloudSettings.yandexDisk?.enabled || cloudSettings.googleDrive?.enabled) {
-          try {
-            await window.electronAPI.syncToCloud();
-            console.log('Синхронизация с облаком завершена после удаления раскладки');
-          } catch (error) {
-            console.error('Ошибка синхронизации с облаком:', error);
-          }
-        }
-      }).catch((error) => {
-        console.error('Ошибка получения настроек облака:', error);
-      });
+      void triggerCloudSync();
       
       // Дополнительная разблокировка после удаления
       setTimeout(unlockInputs, 50);
@@ -291,14 +319,18 @@ export function Sidebar({
   return (
     <div className="sidebar">
       <div className="sidebar-header">
-        <h2>SafeKey</h2>
+        <span className="brand-mark lg" aria-hidden />
+        <div className="sidebar-header-text">
+          <h2>SafeKey</h2>
+          <span className="sidebar-header-sub">локальное хранилище</span>
+        </div>
       </div>
 
       <div className="sidebar-search">
-        <Search size={18} />
+        <Search size={16} />
         <input
           type="text"
-          placeholder="Поиск..."
+          placeholder="Поиск по сервисам…"
           value={searchQuery}
           onChange={handleSearchChange}
         />
@@ -370,11 +402,35 @@ export function Sidebar({
       </div>
 
       <div className="sidebar-footer">
-        <button className="nav-item" onClick={onSettingsClick}>
-          <Settings size={18} />
-          <span>Настройки</span>
+        {cloudConnected && (
+          <div className="sidebar-sync-pill">
+            <span className="sidebar-sync-dot" />
+            Облако · {formatRelative(lastBackupAt)}
+          </div>
+        )}
+        {quotas.length > 0 && (
+          <div className="sidebar-storage">
+            {quotas.map((q) => (
+              <div className="sidebar-storage-row" key={q.provider}>
+                <div className="sidebar-storage-head">
+                  <span>{providerShort(q.provider)}</span>
+                  <span>{formatQuota(q.used)} / {formatQuota(q.total)}</span>
+                </div>
+                <div className="sidebar-storage-bar">
+                  <i
+                    className="sidebar-storage-fill"
+                    style={{ width: `${Math.min(100, Math.round((q.used / q.total) * 100))}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        <button type="button" className="settings-btn" onClick={onSettingsClick}>
+          <Settings size={16} />
+          Параметры
         </button>
-        <button className="nav-item" onClick={logout}>
+        <button className="nav-item sidebar-logout" onClick={logout}>
           <LogOut size={18} />
           <span>Выход</span>
         </button>

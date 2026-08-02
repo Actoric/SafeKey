@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Plus, Trash2, Copy, Check, X, ArrowUpDown, Download, Trash, Upload } from 'lucide-react';
 import { DatabaseBackupCodeEntry, BackupCode, CreateBackupCodeEntryRequest, UpdateBackupCodeEntryRequest, BackupCodeEntryData } from '../../../shared/types';
+import { triggerCloudSync } from '../utils/cloud-sync';
 import './BackupCodes.css';
 
 type SortType = 'name-asc' | 'name-desc' | 'date-asc' | 'date-desc' | 'none';
@@ -109,14 +110,7 @@ export function BackupCodes({ onClose, sortType = 'none', onSortChange }: Backup
       await loadEntries();
       
       // Автосохранение на облачные диски
-      try {
-        const cloudSettings = await window.electronAPI.getCloudSettings();
-        if (cloudSettings.yandexDisk?.enabled || cloudSettings.googleDrive?.enabled) {
-          await window.electronAPI.syncToCloud();
-        }
-      } catch (error) {
-        console.error('Ошибка синхронизации с облаком:', error);
-      }
+      await triggerCloudSync();
     } catch (error) {
       console.error('Ошибка создания записи:', error);
       alert('Ошибка создания записи');
@@ -140,14 +134,7 @@ export function BackupCodes({ onClose, sortType = 'none', onSortChange }: Backup
       await loadEntries();
       
       // Автосохранение на облачные диски
-      try {
-        const cloudSettings = await window.electronAPI.getCloudSettings();
-        if (cloudSettings.yandexDisk?.enabled || cloudSettings.googleDrive?.enabled) {
-          await window.electronAPI.syncToCloud();
-        }
-      } catch (error) {
-        console.error('Ошибка синхронизации с облаком:', error);
-      }
+      await triggerCloudSync();
     } catch (error) {
       console.error('Ошибка удаления записи:', error);
       alert('Ошибка удаления записи');
@@ -181,14 +168,7 @@ export function BackupCodes({ onClose, sortType = 'none', onSortChange }: Backup
       }
       
       // Автосохранение на облачные диски
-      try {
-        const cloudSettings = await window.electronAPI.getCloudSettings();
-        if (cloudSettings.yandexDisk?.enabled || cloudSettings.googleDrive?.enabled) {
-          await window.electronAPI.syncToCloud();
-        }
-      } catch (error) {
-        console.error('Ошибка синхронизации с облаком:', error);
-      }
+      await triggerCloudSync();
     } catch (error) {
       console.error('Ошибка обновления кода:', error);
       alert('Ошибка обновления кода');
@@ -243,16 +223,7 @@ export function BackupCodes({ onClose, sortType = 'none', onSortChange }: Backup
         setSelectedEntry({ ...updated, data: decryptedUpdated });
       }
       
-      // Синхронизация с облаком в фоне
-      window.electronAPI.getCloudSettings().then(async (cloudSettings) => {
-        if (cloudSettings.yandexDisk?.enabled || cloudSettings.googleDrive?.enabled) {
-          try {
-            await window.electronAPI.syncToCloud();
-          } catch (error) {
-            console.error('Ошибка синхронизации с облаком:', error);
-          }
-        }
-      });
+      void triggerCloudSync();
     } catch (error) {
       console.error('Ошибка удаления кода:', error);
       alert('Ошибка удаления кода');
@@ -361,14 +332,7 @@ export function BackupCodes({ onClose, sortType = 'none', onSortChange }: Backup
       setSelectedEntry({ ...updated, data: decrypted });
       
       // Автосохранение на облачные диски
-      try {
-        const cloudSettings = await window.electronAPI.getCloudSettings();
-        if (cloudSettings.yandexDisk?.enabled || cloudSettings.googleDrive?.enabled) {
-          await window.electronAPI.syncToCloud();
-        }
-      } catch (error) {
-        console.error('Ошибка синхронизации с облаком:', error);
-      }
+      await triggerCloudSync();
     } catch (error) {
       console.error('Ошибка обновления названия:', error);
       alert('Ошибка обновления названия');

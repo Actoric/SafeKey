@@ -2,11 +2,8 @@ import { BrowserWindow } from 'electron';
 import * as https from 'https';
 import * as http from 'http';
 
-// Google OAuth 2.0 credentials
-// ВАЖНО: Эти данные нужно получить в Google Cloud Console
-// https://console.cloud.google.com/apis/credentials
-const CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID'; // Замените на ваш Client ID
-const CLIENT_SECRET = 'YOUR_GOOGLE_CLIENT_SECRET'; // Замените на ваш Client Secret
+const CLIENT_ID = process.env.SAFEKEY_GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID';
+const CLIENT_SECRET = process.env.SAFEKEY_GOOGLE_CLIENT_SECRET || 'YOUR_GOOGLE_CLIENT_SECRET';
 const REDIRECT_URI = 'http://localhost:8080/google-oauth-callback';
 
 interface TokenResponse {
@@ -18,13 +15,53 @@ interface TokenResponse {
   error_description?: string;
 }
 
+export type GoogleAuthResult = {
+  accessToken: string;
+  refreshToken?: string;
+  expiresIn?: number;
+};
+
+function postForm(pathName: string, body: URLSearchParams): Promise<TokenResponse> {
+  return new Promise((resolve, reject) => {
+    const postData = body.toString();
+    const req = https.request(
+      {
+        hostname: 'oauth2.googleapis.com',
+        path: pathName,
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Content-Length': Buffer.byteLength(postData),
+        },
+      },
+      (res) => {
+        let data = '';
+        res.on('data', (chunk) => {
+          data += chunk;
+        });
+        res.on('end', () => {
+          try {
+            resolve(JSON.parse(data) as TokenResponse);
+          } catch (error) {
+            reject(error);
+          }
+        });
+      }
+    );
+    req.on('error', reject);
+    req.write(postData);
+    req.end();
+  });
+}
+
 /**
  * Сервис для OAuth авторизации Google Drive
  */
 export class GoogleOAuthService {
-  /**
-   * Получить URL для авторизации
-   */
+  static isConfigured(): boolean {
+    return !CLIENT_ID.includes('YOUR_GOOGLE') && !CLIENT_SECRET.includes('YOUR_GOOGLE');
+  }
+
   static getAuthUrl(): string {
     const params = new URLSearchParams({
       client_id: CLIENT_ID,
@@ -37,71 +74,66 @@ export class GoogleOAuthService {
     return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
   }
 
-  /**
-   * Обменять код авторизации на токен
-   */
-  static async exchangeCodeForToken(code: string): Promise<string | null> {
-    return new Promise((resolve, reject) => {
-      const postData = new URLSearchParams({
-        code: code,
+  static async exchangeCodeForToken(code: string): Promise<GoogleAuthResult> {
+    const response = await postForm(
+      '/token',
+      new URLSearchParams({
+        code,
         client_id: CLIENT_ID,
         client_secret: CLIENT_SECRET,
         redirect_uri: REDIRECT_URI,
         grant_type: 'authorization_code',
-      }).toString();
+      })
+    );
 
-      const options = {
-        hostname: 'oauth2.googleapis.com',
-        path: '/token',
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Content-Length': Buffer.byteLength(postData),
-        },
-      };
+    if (!response.access_token) {
+      throw new Error(response.error_description || response.error || 'Неизвестная ошибка');
+    }
 
-      const req = https.request(options, (res) => {
-        let data = '';
-
-        res.on('data', (chunk) => {
-          data += chunk;
-        });
-
-        res.on('end', () => {
-          try {
-            const response: TokenResponse = JSON.parse(data);
-            if (response.access_token) {
-              resolve(response.access_token);
-            } else {
-              console.error('[GoogleOAuth] Ошибка получения токена:', response.error, response.error_description);
-              reject(new Error(response.error_description || response.error || 'Неизвестная ошибка'));
-            }
-          } catch (error) {
-            console.error('[GoogleOAuth] Ошибка парсинга ответа:', error);
-            reject(error);
-          }
-        });
-      });
-
-      req.on('error', (error) => {
-        console.error('[GoogleOAuth] Ошибка запроса:', error);
-        reject(error);
-      });
-
-      req.write(postData);
-      req.end();
-    });
+    return {
+      accessToken: response.access_token,
+      refreshToken: response.refresh_token,
+      expiresIn: response.expires_in,
+    };
   }
 
-  /**
-   * Авторизация через OAuth
-   */
-  static async authorize(): Promise<string | null> {
-    return new Promise((resolve, reject) => {
-      const authUrl = this.getAuthUrl();
-      console.log('[GoogleOAuth] URL авторизации:', authUrl);
+  static async refreshAccessToken(refreshToken: string): Promise<GoogleAuthResult> {
+    const response = await postForm(
+      '/token',
+      new URLSearchParams({
+        client_id: CLIENT_ID,
+        client_secret: CLIENT_SECRET,
+        refresh_token: refreshToken,
+        grant_type: 'refresh_token',
+      })
+    );
 
-      // Создаем временное окно для авторизации
+    if (!response.access_token) {
+      throw new Error(response.error_description || response.error || 'Не удалось обновить токен');
+    }
+
+    return {
+      accessToken: response.access_token,
+      refreshToken: response.refresh_token || refreshToken,
+      expiresIn: response.expires_in,
+    };
+  }
+
+  static async authorize(): Promise<GoogleAuthResult | null> {
+    if (!this.isConfigured()) {
+      throw new Error(
+        'Google Drive не настроен: задайте SAFEKEY_GOOGLE_CLIENT_ID и SAFEKEY_GOOGLE_CLIENT_SECRET'
+      );
+    }
+
+    return new Promise((resolve, reject) => {
+      let settled = false;
+      const settle = (fn: () => void) => {
+        if (settled) return;
+        settled = true;
+        fn();
+      };
+
       const authWindow = new BrowserWindow({
         width: 500,
         height: 600,
@@ -113,44 +145,40 @@ export class GoogleOAuthService {
         },
       });
 
-      authWindow.loadURL(authUrl);
+      authWindow.loadURL(this.getAuthUrl());
 
-      // Создаем локальный сервер для получения callback
       const server = http.createServer((req: http.IncomingMessage, res: http.ServerResponse) => {
-        if (req.url?.startsWith('/google-oauth-callback')) {
-          const url = new URL(req.url, `http://${req.headers.host}`);
-          const code = url.searchParams.get('code');
-          const error = url.searchParams.get('error');
+        if (!req.url?.startsWith('/google-oauth-callback')) return;
 
-          res.writeHead(200, { 'Content-Type': 'text/html' });
-          if (error) {
-            res.end('<html><body><h1>Ошибка авторизации</h1><p>Можно закрыть это окно.</p></body></html>');
-            authWindow.close();
-            server.close();
-            reject(new Error(error));
-            return;
-          }
+        const url = new URL(req.url, `http://${req.headers.host}`);
+        const code = url.searchParams.get('code');
+        const error = url.searchParams.get('error');
 
-          if (code) {
-            res.end('<html><body><h1>Авторизация успешна!</h1><p>Можно закрыть это окно.</p></body></html>');
-            authWindow.close();
-            server.close();
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
 
-            // Обмениваем код на токен
-            this.exchangeCodeForToken(code)
-              .then((token) => {
-                resolve(token);
-              })
-              .catch((error) => {
-                reject(error);
-              });
-          } else {
-            res.end('<html><body><h1>Код не получен</h1><p>Можно закрыть это окно.</p></body></html>');
-            authWindow.close();
-            server.close();
-            reject(new Error('Код авторизации не получен'));
-          }
+        if (error) {
+          res.end('<html><body><h1>Ошибка авторизации</h1><p>Можно закрыть это окно.</p></body></html>');
+          authWindow.close();
+          server.close();
+          settle(() => reject(new Error(error)));
+          return;
         }
+
+        if (!code) {
+          res.end('<html><body><h1>Код не получен</h1><p>Можно закрыть это окно.</p></body></html>');
+          authWindow.close();
+          server.close();
+          settle(() => reject(new Error('Код авторизации не получен')));
+          return;
+        }
+
+        res.end('<html><body><h1>Авторизация успешна!</h1><p>Можно закрыть это окно.</p></body></html>');
+        authWindow.close();
+        server.close();
+
+        this.exchangeCodeForToken(code)
+          .then((token) => settle(() => resolve(token)))
+          .catch((err) => settle(() => reject(err)));
       });
 
       server.listen(8080, 'localhost', () => {
@@ -159,7 +187,7 @@ export class GoogleOAuthService {
 
       authWindow.on('closed', () => {
         server.close();
-        reject(new Error('Окно авторизации закрыто'));
+        settle(() => reject(new Error('Окно авторизации закрыто')));
       });
     });
   }

@@ -1,0 +1,6 @@
+# На GitHub только README.md и src/
+*
+!README.md
+!src/
+!src/**
+!.gitignore

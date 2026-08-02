@@ -261,6 +261,33 @@ export class YandexDiskService {
   }
 
   /**
+   * Квота диска: total / used в байтах.
+   */
+  async getQuota(): Promise<{ total: number; used: number } | null> {
+    try {
+      const url = 'https://cloud-api.yandex.net/v1/disk/';
+      const response = await httpRequest(url, {
+        method: 'GET',
+        headers: {
+          Authorization: `OAuth ${this.token}`,
+        },
+      });
+      if (response.status < 200 || response.status >= 300) {
+        console.error('[YandexDisk] getQuota error:', response.status, response.data);
+        return null;
+      }
+      const data = JSON.parse(response.data) as { total_space?: number; used_space?: number };
+      if (typeof data.total_space !== 'number' || typeof data.used_space !== 'number') {
+        return null;
+      }
+      return { total: data.total_space, used: data.used_space };
+    } catch (error) {
+      console.error('[YandexDisk] getQuota error:', error);
+      return null;
+    }
+  }
+
+  /**
    * Убедиться, что директория существует на диске
    */
   private async ensureDirectory(dirPath: string): Promise<boolean> {

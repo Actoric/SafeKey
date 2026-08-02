@@ -42,6 +42,16 @@ export function validatePasswordStrength(password: string): {
 
   if (password.length >= 12) score++;
 
+  const isLongPassphrase =
+    password.length >= 24 &&
+    (password.includes('-') || /[\u0400-\u04FF]/.test(password) || /[%$*!@#&^~=+]/.test(password));
+
+  if (isLongPassphrase) {
+    score += 4;
+    if (password.length >= 32) score++;
+    return { score: Math.min(score, 8), feedback };
+  }
+
   if (/[a-z]/.test(password)) score++;
   else feedback.push('Добавьте строчные буквы');
 

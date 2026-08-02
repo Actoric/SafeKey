@@ -65,7 +65,20 @@ const electronAPI = {
     ipcRenderer.invoke('save-cloud-settings', settings),
   authorizeYandexDisk: () => ipcRenderer.invoke('authorize-yandex-disk'),
   authorizeGoogleDrive: () => ipcRenderer.invoke('authorize-google-drive'),
+  disconnectCloudProvider: (provider: 'yandex' | 'google') =>
+    ipcRenderer.invoke('disconnect-cloud-provider', provider),
   syncToCloud: () => ipcRenderer.invoke('sync-to-cloud'),
+  restoreFromCloud: (provider?: 'yandex' | 'google', legacyWindowsUsername?: string, backupFileName?: string, recoveryCode?: string) =>
+    ipcRenderer.invoke('restore-from-cloud', provider || 'yandex', legacyWindowsUsername, backupFileName, recoveryCode),
+  restoreFromYandexDisk: (legacyWindowsUsername?: string) =>
+    ipcRenderer.invoke('restore-from-yandex-disk', legacyWindowsUsername),
+  listCloudVersions: (provider?: 'yandex' | 'google') =>
+    ipcRenderer.invoke('list-cloud-versions', provider || 'yandex'),
+  getCloudStorageQuota: (provider?: 'yandex' | 'google') =>
+    ipcRenderer.invoke('get-cloud-storage-quota', provider),
+  configureCloudRecovery: (recoveryCode: string) =>
+    ipcRenderer.invoke('configure-cloud-recovery', recoveryCode),
+  clearCloudRecovery: () => ipcRenderer.invoke('clear-cloud-recovery'),
   checkCloudSync: () => ipcRenderer.invoke('check-cloud-sync'),
   getWindowsUsername: () => ipcRenderer.invoke('get-windows-username'),
   setAppPin: (pin: string) => ipcRenderer.invoke('set-app-pin', pin),

@@ -5,57 +5,84 @@
 }
 
 :root {
-  --bg-primary: #ffffff;
-  --bg-secondary: #f5f5f5;
-  --bg-tertiary: #e8e8e8;
-  --text-primary: #1a1a1a;
-  --text-secondary: #666666;
-  --text-muted: #999999;
-  --accent: #2563eb;
-  --accent-hover: #1d4ed8;
-  --primary-color: #2563eb;
-  --primary-color-hover: #1d4ed8;
-  --border: #e0e0e0;
-  --border-input: #d0d0d0;
-  --button-secondary: #e8e8e8;
-  --button-secondary-hover: #d0d0d0;
-  --success: #10b981;
-  --danger: #ef4444;
-  --warning: #f59e0b;
+  /* Keystone — light */
+  --ink: #15201c;
+  --ink-soft: #3d4a44;
+  --muted: #6b7872;
+  --paper: #eef1ee;
+  --surface: #f7f8f6;
+  --surface-2: #ffffff;
+  --line: #d5dbd6;
+  --brass: #a67c52;
+  --accent-soft: #d8ede8;
+  --shadow: 0 18px 40px rgba(21, 32, 28, 0.08);
+  --font-display: "Syne", system-ui, sans-serif;
+  --font-body: "Source Sans 3", system-ui, sans-serif;
+
+  --bg-primary: var(--surface-2);
+  --bg-secondary: var(--surface);
+  --bg-tertiary: #e8ece9;
+  --text-primary: var(--ink);
+  --text-secondary: var(--ink-soft);
+  --text-muted: var(--muted);
+  --accent: #0f6b5c;
+  --accent-hover: #0c5649;
+  --primary-color: var(--accent);
+  --primary-color-hover: var(--accent-hover);
+  --border: var(--line);
+  --border-input: #c5cdc8;
+  --button-secondary: var(--bg-tertiary);
+  --button-secondary-hover: #dce2de;
+  --success: #1f7a4d;
+  --danger: #b42318;
+  --warning: #a67c52;
 }
 
 [data-theme='dark'] {
-  --bg-primary: #1F2937;
-  --bg-secondary: #1F2937;
-  --bg-tertiary: #374151;
-  --text-primary: #F3F4F6;
-  --text-secondary: #D1D5DB;
-  --text-muted: #9CA3AF;
-  --accent: #2563eb;
-  --accent-hover: #1d4ed8;
-  --border: #374151;
-  --border-input: #4B5563;
-  --button-secondary: #374151;
-  --button-secondary-hover: #4B5563;
-  --success: #10b981;
-  --danger: #ef4444;
-  --warning: #f59e0b;
+  --ink: #e8ece9;
+  --ink-soft: #b7c0bb;
+  --muted: #87918c;
+  --paper: #101614;
+  --surface: #161c1a;
+  --surface-2: #1c2421;
+  --line: #2a3430;
+  --brass: #c9a27a;
+  --accent-soft: #1a3a34;
+  --shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+
+  --bg-primary: var(--surface-2);
+  --bg-secondary: var(--surface);
+  --bg-tertiary: #222b28;
+  --text-primary: var(--ink);
+  --text-secondary: var(--ink-soft);
+  --text-muted: var(--muted);
+  --accent: #3dbaa4;
+  --accent-hover: #52cbb5;
+  --primary-color: var(--accent);
+  --primary-color-hover: var(--accent-hover);
+  --border: var(--line);
+  --border-input: #3a4540;
+  --button-secondary: var(--bg-tertiary);
+  --button-secondary-hover: #2c3733;
+  --success: #3dbaa4;
+  --danger: #f04438;
+  --warning: #c9a27a;
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: var(--bg-primary);
+  background:
+    radial-gradient(1200px 600px at 8% -12%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 55%),
+    radial-gradient(900px 500px at 100% 0%, color-mix(in srgb, var(--brass) 10%, transparent), transparent 50%),
+    var(--paper);
   color: var(--text-primary);
   overflow: hidden;
   margin: 0;
   padding: 0;
 }
 
-/* Прозрачный фон для оверлея */
 body.overlay-mode,
 html.overlay-mode {
   background: transparent !important;
@@ -82,12 +109,99 @@ button {
   font-family: inherit;
 }
 
-input, textarea {
+input, textarea, select {
   font-family: inherit;
   outline: none;
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+}
+
+/* Keystone scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--accent) 55%, var(--border)) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--accent) 45%, var(--border));
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--accent) 70%, var(--brass));
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+.brand-mark {
+  width: 16px;
+  height: 16px;
+  border-radius: 5px;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent) 55%, var(--brass) 55%, var(--brass) 100%);
+  flex-shrink: 0;
+}
+
+.brand-mark.lg {
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+}
+
+h1, h2, h3, .display-font {
+  font-family: var(--font-display);
+  letter-spacing: -0.03em;
+}
+
+.primary-button {
+  padding: 10px 16px;
+  background: var(--accent);
+  color: white;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background 0.2s, transform 0.15s;
+}
+
+.primary-button:hover:not(:disabled) {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+}
+
+.primary-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.secondary-button {
+  padding: 10px 16px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.secondary-button:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
 }

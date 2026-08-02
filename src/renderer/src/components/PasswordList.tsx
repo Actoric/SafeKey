@@ -14,9 +14,10 @@ interface PasswordListProps {
   loading: boolean;
   sortType?: SortType;
   onSortChange?: (sortType: SortType) => void;
+  selectedId?: number | null;
 }
 
-export function PasswordList({ passwords, onSelect, onDelete, onDeleteMultiple, onToggleFavorite, loading, sortType = 'none', onSortChange }: PasswordListProps) {
+export function PasswordList({ passwords, onSelect, onDelete, onDeleteMultiple, onToggleFavorite, loading, sortType = 'none', onSortChange, selectedId }: PasswordListProps) {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
@@ -60,7 +61,10 @@ export function PasswordList({ passwords, onSelect, onDelete, onDeleteMultiple, 
     return (
       <div className="password-list">
         <div className="password-list-header">
-          <h3>Пароли</h3>
+          <div>
+            <h3>Пароли</h3>
+            <div className="password-list-meta">Загрузка…</div>
+          </div>
         </div>
         <div className="password-list-content">
           <div className="loading">Загрузка...</div>
@@ -73,12 +77,15 @@ export function PasswordList({ passwords, onSelect, onDelete, onDeleteMultiple, 
     return (
       <div className="password-list">
         <div className="password-list-header">
-          <h3>Пароли</h3>
+          <div>
+            <h3>Пароли</h3>
+            <div className="password-list-meta">Пока пусто</div>
+          </div>
         </div>
         <div className="password-list-content">
           <div className="empty-state">
             <p>Паролей пока нет</p>
-            <p className="empty-state-subtitle">Нажмите "Новый пароль" для создания</p>
+            <p className="empty-state-subtitle">Нажмите «Новый пароль» для создания</p>
           </div>
         </div>
       </div>
@@ -88,7 +95,10 @@ export function PasswordList({ passwords, onSelect, onDelete, onDeleteMultiple, 
   return (
     <div className="password-list">
       <div className="password-list-header">
-        <h3>Пароли ({passwords.length})</h3>
+        <div>
+          <h3>Пароли</h3>
+          <div className="password-list-meta">{passwords.length} записей</div>
+        </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           {selectionMode ? (
             <>
@@ -160,7 +170,7 @@ export function PasswordList({ passwords, onSelect, onDelete, onDeleteMultiple, 
         {passwords.map((password) => (
           <div
             key={password.id}
-            className={`password-item ${selectionMode ? 'selection-mode' : ''} ${selectedIds.has(password.id) ? 'selected' : ''}`}
+            className={`password-item ${selectionMode ? 'selection-mode' : ''} ${selectedIds.has(password.id) ? 'selected' : ''} ${!selectionMode && selectedId === password.id ? 'is-active' : ''}`}
             onClick={() => {
               if (selectionMode) {
                 toggleSelection(password.id);
@@ -184,7 +194,7 @@ export function PasswordList({ passwords, onSelect, onDelete, onDeleteMultiple, 
               </div>
             )}
             <div className="password-item-main">
-              <div className="password-item-icon">
+              <div className={`password-item-icon tone-${(password.data.service.charCodeAt(0) % 4) + 1}`}>
                 {password.data.service.charAt(0).toUpperCase()}
               </div>
               <div className="password-item-info">
